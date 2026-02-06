@@ -45,14 +45,14 @@ export const authAPI = {
   },
 
   forgotPassword: async (email: string) => {
-    return await apiRequest<{ message: string }>("/api/auth/forgot-password", {
+    return await apiRequest<{ message: string }>("/auth/forgot-password", {
       method: "POST",
       body: JSON.stringify({ email }),
     });
   },
 
   resetPassword: async (data: { token: string; newPassword: string }) => {
-    return await apiRequest<{ message: string }>("/api/auth/reset-password", {
+    return await apiRequest<{ message: string }>("/auth/reset-password", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -60,13 +60,13 @@ export const authAPI = {
 
   getOnboardingStatus: async () => {
     return await apiRequest<{ isOnboarded: boolean; onboardingType: string | null }>(
-      "/api/users/me/onboarding",
+      "/users/me/onboarding",
       { method: "GET" }
     );
   },
 
   completeOnboarding: async (onboardingType: string) => {
-    return await apiRequest<{ message: string; isOnboarded: boolean }>("/api/users/me/onboarding", {
+    return await apiRequest<{ message: string; isOnboarded: boolean }>("/users/me/onboarding", {
       method: "POST",
       body: JSON.stringify({ onboardingType }),
     });

@@ -23,7 +23,22 @@
         "foregroundImage": "./public/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.inficreator.hellomomrn"
+      "package": "com.nova",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "https",
+              "host": "nova"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./public/favicon.ico"

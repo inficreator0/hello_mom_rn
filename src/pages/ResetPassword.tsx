@@ -1,34 +1,39 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, StyleSheet } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Heart } from "lucide-react-native";
+import { AnimatedHeart } from "../components/ui/AnimatedHeart";
 import { PageContainer } from "../components/common/PageContainer";
 import { authAPI } from "../lib/api/auth";
 import { useToast } from "../context/ToastContext";
 
 export const ResetPassword = () => {
-    const [token, setToken] = useState("");
+    const route = useRoute<any>();
+    const [token, setToken] = useState(route.params?.token || "");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
     const navigation = useNavigation<any>();
-    const route = useRoute<any>();
     const { showToast } = useToast();
 
-    // Optionally get token from route params if deep linked
-    useState(() => {
+    // Update token if it changes in route params
+    useEffect(() => {
         if (route.params?.token) {
             setToken(route.params.token);
         }
-    });
+    }, [route.params?.token]);
 
     const handleSubmit = async () => {
-        if (!token.trim() || !newPassword.trim()) {
-            setError("Please fill in all fields.");
+        if (!token) {
+            setError("Invalid or missing reset token. Please use the link sent to your email.");
+            return;
+        }
+
+        if (!newPassword.trim()) {
+            setError("Please enter a new password.");
             return;
         }
 
@@ -51,6 +56,8 @@ export const ResetPassword = () => {
         }
     };
 
+    const isTokenMissing = !token;
+
     return (
         <PageContainer style={styles.container}>
             <KeyboardAvoidingView
@@ -65,60 +72,67 @@ export const ResetPassword = () => {
                     <Card style={styles.card}>
                         <CardHeader style={styles.cardHeader}>
                             <View style={styles.iconContainer}>
-                                <Heart size={40} color="#ec4899" fill="#ec4899" />
+                                <AnimatedHeart size={40} />
                             </View>
-                            <CardTitle style={styles.cardTitle}>Create New Password</CardTitle>
+                            <CardTitle style={styles.cardTitle}>
+                                {isTokenMissing ? "Invalid Link" : "Create New Password"}
+                            </CardTitle>
                             <CardDescription style={styles.cardDescription}>
-                                Enter the token from your email and your new password.
+                                {isTokenMissing
+                                    ? "This password reset link appears to be invalid or expired. Please request a new one."
+                                    : "Enter your new password below ."}
                             </CardDescription>
                         </CardHeader>
                         <CardContent style={styles.cardContent}>
-                            <View style={styles.inputGroup}>
-                                <Input
-                                    placeholder="Reset Token *"
-                                    value={token}
-                                    onChangeText={setToken}
-                                    editable={!isLoading}
-                                />
-                            </View>
+                            {!isTokenMissing ? (
+                                <>
+                                    <View style={styles.inputGroup}>
+                                        <Input
+                                            placeholder="New Password *"
+                                            secureTextEntry
+                                            showPasswordToggle
+                                            value={newPassword}
+                                            onChangeText={setNewPassword}
+                                            editable={!isLoading}
+                                        />
+                                    </View>
 
-                            <View style={styles.inputGroup}>
-                                <Input
-                                    placeholder="New Password *"
-                                    secureTextEntry
-                                    value={newPassword}
-                                    onChangeText={setNewPassword}
-                                    editable={!isLoading}
-                                />
-                            </View>
+                                    <View style={styles.inputGroup}>
+                                        <Input
+                                            placeholder="Confirm New Password *"
+                                            secureTextEntry
+                                            showPasswordToggle
+                                            value={confirmPassword}
+                                            onChangeText={setConfirmPassword}
+                                            editable={!isLoading}
+                                        />
+                                    </View>
 
-                            <View style={styles.inputGroup}>
-                                <Input
-                                    placeholder="Confirm New Password *"
-                                    secureTextEntry
-                                    value={confirmPassword}
-                                    onChangeText={setConfirmPassword}
-                                    editable={!isLoading}
-                                />
-                            </View>
+                                    {error ? (
+                                        <View style={styles.errorContainer}>
+                                            <Text style={styles.errorText}>{error}</Text>
+                                        </View>
+                                    ) : null}
 
-                            {error ? (
+                                    <Button
+                                        style={styles.submitButton}
+                                        onPress={handleSubmit}
+                                        disabled={isLoading}
+                                    >
+                                        {isLoading ? (
+                                            <ActivityIndicator color="white" />
+                                        ) : (
+                                            <Text style={styles.buttonText}>Reset Password</Text>
+                                        )}
+                                    </Button>
+                                </>
+                            ) : (
                                 <View style={styles.errorContainer}>
-                                    <Text style={styles.errorText}>{error}</Text>
+                                    <Text style={[styles.errorText, { textAlign: 'center' }]}>
+                                        Token missing. Please check your email for the correct reset link.
+                                    </Text>
                                 </View>
-                            ) : null}
-
-                            <Button
-                                style={styles.submitButton}
-                                onPress={handleSubmit}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                    <ActivityIndicator color="white" />
-                                ) : (
-                                    <Text style={styles.buttonText}>Reset Password</Text>
-                                )}
-                            </Button>
+                            )}
 
                             <Button
                                 variant="outline"
@@ -163,11 +177,17 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     cardTitle: {
-        fontSize: 20,
+        fontSize: 24,
+        fontWeight: '700',
         textAlign: 'center',
+        color: '#0f172a',
+        marginBottom: 4,
     },
     cardDescription: {
+        fontSize: 16,
         textAlign: 'center',
+        color: '#64748b',
+        paddingHorizontal: 16,
     },
     cardContent: {
         gap: 16,

@@ -149,6 +149,7 @@ const Login = () => {
                     <Input
                       placeholder="Password *"
                       secureTextEntry
+                      showPasswordToggle
                       value={password}
                       onChangeText={setPassword}
                       editable={!isLoading}

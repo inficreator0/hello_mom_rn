@@ -2,9 +2,10 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Activity, FileText, Stethoscope, Users } from 'lucide-react-native';
-import { DefaultTheme } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Linking from 'expo-linking';
 
 import Community from './components/Community';
 import { Trackers } from './pages/Trackers';
@@ -24,10 +25,23 @@ import { ComingSoon } from './pages/ComingSoon';
 
 import { ResetPassword } from './pages/ResetPassword';
 
+const prefix = Linking.createURL('/');
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-
+const linking = {
+  prefixes: [prefix, 'nova://', 'https://nova'],
+  config: {
+    screens: {
+      ResetPassword: {
+        path: 'reset-password',
+        alias: ['rest-password']
+      },
+      Login: 'login',
+    },
+  },
+};
 
 const MainTabs = () => {
   return (
@@ -100,26 +114,30 @@ const Navigation = () => {
   }
 
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {!isAuthenticated ? (
-        <>
-          <Stack.Screen name="Login" component={Login} />
-          <Stack.Screen name="ResetPassword" component={ResetPassword} />
-        </>
-      ) : !isOnboarded ? (
-        <Stack.Screen name="Onboarding" component={Onboarding} />
-      ) : (
-        <>
-          <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="PostDetail" component={PostDetail} />
-          <Stack.Screen name="CreatePost" component={CreatePost} />
-          <Stack.Screen name="PeriodTracker" component={PeriodTracker} />
-          <Stack.Screen name="BabyWeightTracker" component={BabyWeightTracker} />
-          <Stack.Screen name="ComingSoon" component={ComingSoon} />
-          <Stack.Screen name="Onboarding" component={Onboarding} />
-        </>
-      )}
-    </Stack.Navigator>
+    <NavigationIndependentTree>
+      <NavigationContainer linking={linking}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!isAuthenticated ? (
+            <>
+              <Stack.Screen name="Login" component={Login} />
+              <Stack.Screen name="ResetPassword" component={ResetPassword} />
+            </>
+          ) : !isOnboarded ? (
+            <Stack.Screen name="Onboarding" component={Onboarding} />
+          ) : (
+            <>
+              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="PostDetail" component={PostDetail} />
+              <Stack.Screen name="CreatePost" component={CreatePost} />
+              <Stack.Screen name="PeriodTracker" component={PeriodTracker} />
+              <Stack.Screen name="BabyWeightTracker" component={BabyWeightTracker} />
+              <Stack.Screen name="ComingSoon" component={ComingSoon} />
+              <Stack.Screen name="Onboarding" component={Onboarding} />
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </NavigationIndependentTree>
   );
 };
 

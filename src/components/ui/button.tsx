@@ -60,13 +60,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   disabled: {
     opacity: 0.5,
   },
   variant_default: {
     backgroundColor: '#ec4899', // primary
+    shadowColor: '#ec4899',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   variant_destructive: {
     backgroundColor: '#ef4444',
@@ -106,7 +111,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   textVariant_default: {
     color: '#ffffff',

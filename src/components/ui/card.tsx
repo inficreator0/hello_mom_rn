@@ -71,20 +71,18 @@ CardFooter.displayName = "CardFooter"
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#e2e8f0', // border
+    borderRadius: 24,
     backgroundColor: '#ffffff', // card
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
   },
   header: {
     flexDirection: 'column',
-    padding: 16,
-    gap: 6, // space-y-1.5 approximate
+    padding: 24,
+    gap: 8,
   },
   title: {
     fontSize: 24,
@@ -97,7 +95,7 @@ const styles = StyleSheet.create({
     color: '#64748b', // muted-foreground
   },
   content: {
-    padding: 16,
+    padding: 24,
     paddingTop: 0,
   },
   footer: {
