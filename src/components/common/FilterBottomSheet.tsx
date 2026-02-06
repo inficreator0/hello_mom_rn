@@ -103,23 +103,25 @@ export const FilterBottomSheet = ({
 
 const styles = StyleSheet.create({
     content: {
-        padding: 0,
         backgroundColor: '#ffffff',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
-        maxHeight: '80%',
+        maxHeight: '85%',
+        width: '100%',
     },
     header: {
-        padding: 24,
-        paddingBottom: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 0,
         borderBottomWidth: 1,
         borderBottomColor: '#f1f5f9',
+        marginBottom: 16,
     },
     scrollContent: {
-        padding: 24,
+        paddingVertical: 16,
+        paddingHorizontal: 0,
     },
     section: {
-        marginBottom: 32,
+        marginBottom: 24,
     },
     sectionTitle: {
         fontSize: 16,

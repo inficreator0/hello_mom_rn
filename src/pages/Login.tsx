@@ -8,29 +8,32 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Heart } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
 
 const Login = () => {
-  const [isLoginMode, setIsLoginMode] = useState(true);
+  const [mode, setModeState] = useState<"login" | "signup" | "forgot">("login");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, register, isAuthenticated, isLoading: authLoading } = useAuth();
   const navigation = useNavigation<any>();
   const { onboardingCompleted } = usePreferences();
+  const { authAPI } = require("../lib/api/auth"); // Inline or import at top
 
   const handleSubmit = async () => {
     setError("");
+    setSuccess("");
     setIsLoading(true);
 
     try {
-      if (isLoginMode) {
-        const success = await login(username, password);
-        // Navigation will be handled by App.tsx (state-based)
-      } else {
+      if (mode === "login") {
+        await login(username, password);
+      } else if (mode === "signup") {
         if (!username.trim() || !email.trim() || !password.trim() || !firstName.trim() || !lastName.trim()) {
           setError("Please fill in all fields.");
           setIsLoading(false);
@@ -43,6 +46,14 @@ const Login = () => {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
         });
+      } else if (mode === "forgot") {
+        if (!email.trim()) {
+          setError("Please enter your email.");
+          setIsLoading(false);
+          return;
+        }
+        const res = await authAPI.forgotPassword(email.trim());
+        setSuccess(res.message);
       }
     } catch (err: any) {
       setError(err.message || "An error occurred. Please try again.");
@@ -61,7 +72,7 @@ const Login = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <PageContainer style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex1}
@@ -76,13 +87,33 @@ const Login = () => {
               <View style={styles.iconContainer}>
                 <Heart size={40} color="#ec4899" fill="#ec4899" />
               </View>
-              <CardTitle style={styles.cardTitle}>Welcome to Hello Mom</CardTitle>
+              <CardTitle style={styles.cardTitle}>
+                {mode === "forgot" ? "Reset Password" : "Welcome to Hello Mom"}
+              </CardTitle>
               <CardDescription style={styles.cardDescription}>
-                {isLoginMode ? "Sign in to access your community" : "Create an account to join us"}
+                {mode === "login"
+                  ? "Sign in to access your community"
+                  : mode === "signup"
+                    ? "Create an account to join us"
+                    : "Enter your email to receive a reset link"}
               </CardDescription>
             </CardHeader>
             <CardContent style={styles.cardContent}>
-              {!isLoginMode && (
+              {(mode === "signup" || mode === "forgot") && (
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Email Address</Text>
+                  <Input
+                    placeholder="jane@example.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    value={email}
+                    onChangeText={setEmail}
+                    editable={!isLoading}
+                  />
+                </View>
+              )}
+
+              {mode === "signup" && (
                 <>
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>First Name</Text>
@@ -102,45 +133,51 @@ const Login = () => {
                       editable={!isLoading}
                     />
                   </View>
+                </>
+              )}
+
+              {mode !== "forgot" && (
+                <>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Email</Text>
+                    <Text style={styles.label}>Username</Text>
                     <Input
-                      placeholder="jane@example.com"
-                      keyboardType="email-address"
+                      placeholder="janedoe"
                       autoCapitalize="none"
-                      value={email}
-                      onChangeText={setEmail}
+                      value={username}
+                      onChangeText={setUsername}
+                      editable={!isLoading}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <View style={styles.labelRow}>
+                      <Text style={styles.label}>Password</Text>
+                      {mode === "login" && (
+                        <Pressable onPress={() => setModeState("forgot")}>
+                          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                        </Pressable>
+                      )}
+                    </View>
+                    <Input
+                      placeholder="••••••••"
+                      secureTextEntry
+                      value={password}
+                      onChangeText={setPassword}
                       editable={!isLoading}
                     />
                   </View>
                 </>
               )}
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Username</Text>
-                <Input
-                  placeholder="janedoe"
-                  autoCapitalize="none"
-                  value={username}
-                  onChangeText={setUsername}
-                  editable={!isLoading}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
-                <Input
-                  placeholder="••••••••"
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                  editable={!isLoading}
-                />
-              </View>
-
               {error ? (
                 <View style={styles.errorContainer}>
                   <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
+              {success ? (
+                <View style={styles.successContainer}>
+                  <Text style={styles.successText}>{success}</Text>
                 </View>
               ) : null}
 
@@ -152,20 +189,23 @@ const Login = () => {
                 {isLoading ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text style={styles.buttonText}>{isLoginMode ? "Sign In" : "Sign Up"}</Text>
+                  <Text style={styles.buttonText}>
+                    {mode === "login" ? "Sign In" : mode === "signup" ? "Sign Up" : "Send Reset Link"}
+                  </Text>
                 )}
               </Button>
 
               <Pressable
                 onPress={() => {
-                  setIsLoginMode(!isLoginMode);
+                  setModeState(mode === "login" ? "signup" : "login");
                   setError("");
+                  setSuccess("");
                 }}
                 style={styles.switchModeButton}
                 disabled={isLoading}
               >
                 <Text style={styles.switchModeText}>
-                  {isLoginMode
+                  {mode === "login"
                     ? "Don't have an account? Sign up"
                     : "Already have an account? Sign in"}
                 </Text>
@@ -174,7 +214,7 @@ const Login = () => {
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 
@@ -227,11 +267,21 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 4,
   },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   label: {
     fontSize: 14,
     fontWeight: '500',
-    marginBottom: 6,
     color: '#0f172a',
+  },
+  forgotPasswordText: {
+    fontSize: 12,
+    color: '#ec4899',
+    fontWeight: '500',
   },
   errorContainer: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)', // destructive/10
@@ -241,6 +291,15 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     color: '#ef4444', // destructive
+  },
+  successContainer: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)', // success/10
+    padding: 12,
+    borderRadius: 8,
+  },
+  successText: {
+    fontSize: 14,
+    color: '#10b981', // success
   },
   submitButton: {
     width: '100%',

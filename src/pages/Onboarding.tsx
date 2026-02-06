@@ -5,10 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../co
 import { Button } from "../components/ui/button";
 import { Baby, Users, ArrowRight } from "lucide-react-native";
 import { usePreferences } from "../context/PreferencesContext";
+import { useAuth } from "../context/AuthContext";
+import { authAPI } from "../lib/api/auth";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
 
 export const Onboarding = () => {
   const { mode, setMode, completeOnboarding, updatePreferences } = usePreferences();
+  const { checkOnboardingStatus } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedPurpose, setSelectedPurpose] = useState<"baby" | "community" | null>(mode);
   const [babyName, setBabyName] = useState("");
@@ -31,6 +35,14 @@ export const Onboarding = () => {
   const handleFinish = async () => {
     setSaving(true);
     try {
+      // 1. Update backend state
+      const onboardingType = selectedPurpose === "baby" ? "pregnancy" : "general_health";
+      await authAPI.completeOnboarding(onboardingType);
+
+      // 2. Refresh AuthContext state (this will trigger App.tsx navigation)
+      await checkOnboardingStatus();
+
+      // 3. Update local preferences (existing logic)
       updatePreferences({
         babyName: babyName || undefined,
         babyStage,
@@ -38,7 +50,10 @@ export const Onboarding = () => {
         focusAreas,
       });
       completeOnboarding();
-      // App.tsx handles navigation based on onboardingCompleted
+    } catch (error) {
+      console.error("Failed to complete onboarding:", error);
+      // Fallback: still mark as complete locally if backend fails? 
+      // For now, let's let the user try again.
     } finally {
       setSaving(false);
     }
@@ -54,7 +69,7 @@ export const Onboarding = () => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <PageContainer style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.flex1}
@@ -193,7 +208,7 @@ export const Onboarding = () => {
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 

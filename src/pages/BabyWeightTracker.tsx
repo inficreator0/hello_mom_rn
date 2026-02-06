@@ -9,6 +9,8 @@ import { useToast } from "../context/ToastContext";
 import { WeightEntry, WeightData } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
+import { ScreenHeader } from "../components/common/ScreenHeader";
 
 const STORAGE_KEY = "@baby_weight_tracker_data";
 
@@ -114,17 +116,16 @@ export const BabyWeightTracker = () => {
   const weightGain = latestEntry && previousEntry ? latestEntry.weight - previousEntry.weight : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#0f172a" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Growth Tracker</Text>
-        <Button size="sm" onPress={handleAddEntry}>
-          <Plus size={16} color="white" style={styles.buttonIcon} />
-          Add
-        </Button>
-      </View>
+    <PageContainer style={styles.container} edges={['top']}>
+      <ScreenHeader
+        title="Growth Tracker"
+        rightElement={
+          <Button size="sm" onPress={handleAddEntry}>
+            <Plus size={16} color="white" style={styles.buttonIcon} />
+            Add
+          </Button>
+        }
+      />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.statsContainer}>
@@ -262,7 +263,7 @@ export const BabyWeightTracker = () => {
           </View>
         </DialogContent>
       </Dialog>
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 

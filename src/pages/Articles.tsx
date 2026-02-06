@@ -4,6 +4,8 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import SearchBar from "../components/common/SearchBar";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
+import { ScreenHeader } from "../components/common/ScreenHeader";
 
 interface Article {
   id: number;
@@ -113,9 +115,9 @@ export const Articles = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <PageContainer style={styles.container} edges={['top']}>
+      <ScreenHeader title="Helpful Articles" showBackButton={false} />
       <View style={styles.header}>
-        <Text style={styles.title}>Helpful Articles</Text>
         <Text style={styles.subtitle}>Expert guides for your journey.</Text>
       </View>
 
@@ -162,7 +164,7 @@ export const Articles = () => {
           <Text style={styles.emptyText}>No articles found.</Text>
         }
       />
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 
@@ -177,13 +179,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#0f172a', // foreground
   },
   subtitle: {
     color: '#64748b', // muted-foreground
-    fontSize: 14,
+    fontSize: 12,
   },
   listHeader: {
     paddingHorizontal: 16,

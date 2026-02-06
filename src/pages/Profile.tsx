@@ -12,6 +12,8 @@ import { usePreferences } from "../context/PreferencesContext";
 import { Post } from "../types";
 import { Badge } from "../components/ui/badge";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
+import { ScreenHeader } from "../components/common/ScreenHeader";
 import { SvgUri } from "react-native-svg";
 
 import { useToast } from "../context/ToastContext";
@@ -241,7 +243,11 @@ const Profile = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <PageContainer style={styles.container} edges={['top']}>
+      <ScreenHeader
+        title="Profile"
+        showBackButton={false}
+      />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
         <View style={styles.header}>
@@ -261,7 +267,7 @@ const Profile = () => {
               </View>
             </View>
           </View>
-          <Button variant="outline" size="sm" onPress={handleLogout}>
+          <Button variant="outline" size="sm" onPress={handleLogout} style={styles.logoutBtn}>
             Logout
           </Button>
         </View>
@@ -389,7 +395,7 @@ const Profile = () => {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 
@@ -416,7 +422,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 32,
+    marginBottom: 20,
+  },
+  logoutBtn: {
+    borderColor: '#ec4899',
+    height: 40,
   },
   userInfo: {
     flexDirection: 'row',

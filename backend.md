@@ -1,6 +1,6 @@
-# Motherhood Community App - Backend
+# Nova - Backend
 
-A Reddit-like community application backend for first-time mothers, built with Spring Boot.
+A community application backend built with Spring Boot.
 
 ## Features
 
@@ -223,6 +223,57 @@ Content-Type: application/json
 }
 ```
 
+#### Forgot Password
+
+Request a password reset token:
+```http
+POST /api/auth/forgot-password
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "If the email exists, a password reset link has been sent.",
+  "resetToken": null
+}
+```
+
+**Note:** 
+- The password reset link is sent via email to the user
+- Email sent from: `offclockengineers@gmail.com`
+- The reset link expires in 1 hour
+- The message is intentionally vague to prevent user enumeration
+
+#### Reset Password
+
+Reset password using the token:
+```http
+POST /api/auth/reset-password
+Content-Type: application/json
+
+{
+  "token": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "newPassword": "newpassword123"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Password reset successfully"
+}
+```
+
+**Token Details:**
+- Tokens expire after 1 hour
+- Tokens are single-use (cleared after successful reset)
+- Invalid or expired tokens return 400 Bad Request
+
 ### Using the JWT Token
 
 For protected endpoints, include the JWT token in the Authorization header:
@@ -298,6 +349,47 @@ Content-Type: application/json
 ```json
 {
   "message": "Password changed successfully"
+}
+```
+
+#### User Onboarding
+
+##### Complete onboarding
+```http
+POST /api/users/me/onboarding
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "onboardingType": "pregnancy"
+}
+```
+
+**Onboarding Types:**
+- `pregnancy` - For pregnancy-related community
+- `general_health` - For general health discussions
+
+**Response:**
+```json
+{
+  "message": "Onboarding completed successfully",
+  "isOnboarded": true,
+  "onboardingType": "pregnancy"
+}
+```
+
+##### Get onboarding status
+```http
+GET /api/users/me/onboarding
+Authorization: Bearer <your-jwt-token>
+```
+
+**Response:**
+```json
+{
+  "isOnboarded": true,
+  "onboardingType": "pregnancy"
+}
 }
 ```
 

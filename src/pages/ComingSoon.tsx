@@ -5,6 +5,8 @@ import { ArrowLeft, Clock } from "lucide-react-native";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
+import { ScreenHeader } from "../components/common/ScreenHeader";
 
 export const ComingSoon = () => {
   const navigation = useNavigation();
@@ -13,13 +15,8 @@ export const ComingSoon = () => {
   const trackerName = route.params?.trackerName || "this feature";
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#0f172a" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Back</Text>
-      </View>
+    <PageContainer style={styles.container} edges={['top']}>
+      <ScreenHeader title="Coming Soon" />
 
       <View style={styles.content}>
         <Card style={styles.card}>
@@ -40,7 +37,7 @@ export const ComingSoon = () => {
           </CardContent>
         </Card>
       </View>
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 

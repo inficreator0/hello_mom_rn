@@ -10,6 +10,8 @@ import { usePostsStore, transformPost } from "../store/postsStore";
 import { postsAPI } from "../lib/api/posts";
 import { useToast } from "../context/ToastContext";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
+import { ScreenHeader } from "../components/common/ScreenHeader";
 import MultiSelect from "../components/common/MultiSelect";
 
 const CATEGORIES: CommunityCategory[] = ["Pregnancy", "Postpartum", "Feeding", "Sleep", "Mental Health", "Recovery", "Milestones"];
@@ -82,13 +84,8 @@ const CreatePost = () => {
     const isDisabled = isSubmitting || !formData.title.trim() || !formData.content.trim();
 
     return (
-        <SafeAreaView style={styles.container} edges={['top']}>
-            <View style={styles.header}>
-                <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft size={24} color="#0f172a" />
-                </Pressable>
-                <Text style={styles.headerTitle}>{isEditMode ? "Edit Post" : "Create Post"}</Text>
-            </View>
+        <PageContainer style={styles.container} edges={['top']}>
+            <ScreenHeader title={isEditMode ? "Edit Post" : "Create Post"} />
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -96,12 +93,7 @@ const CreatePost = () => {
             >
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
                     <Card style={styles.postCard}>
-                        <CardHeader>
-                            <CardTitle>What's on your mind?</CardTitle>
-                            <CardDescription>
-                                Share your thoughts with the community.
-                            </CardDescription>
-                        </CardHeader>
+
                         <CardContent style={styles.cardContent}>
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Title</Text>
@@ -172,7 +164,7 @@ const CreatePost = () => {
                     </Card>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </PageContainer>
     );
 };
 
@@ -205,7 +197,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
     },
     postCard: {
-        marginBottom: 24,
+        paddingVertical: 24,
     },
     cardContent: {
         gap: 24,
@@ -234,7 +226,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 16,
         marginTop: 8,
-        marginBottom: 40,
     },
     buttonText: {
         color: '#ffffff',

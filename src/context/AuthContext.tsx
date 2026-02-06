@@ -17,6 +17,8 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isOnboarded: boolean;
+  checkOnboardingStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,6 +38,16 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOnboarded, setIsOnboarded] = useState(false);
+
+  const checkOnboardingStatus = async () => {
+    try {
+      const status = await authAPI.getOnboardingStatus();
+      setIsOnboarded(status.isOnboarded);
+    } catch (error) {
+      console.error("Error fetching onboarding status:", error);
+    }
+  };
 
   // Check for existing session on mount
   useEffect(() => {
@@ -46,6 +58,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (storedUser && storedToken) {
           setUser(JSON.parse(storedUser));
+          await checkOnboardingStatus();
         }
       } catch (error) {
         console.error("Error parsing stored user:", error);
@@ -72,6 +85,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       setUser(newUser);
       await AsyncStorage.setItem("user", JSON.stringify(newUser));
+      await checkOnboardingStatus();
       return true;
     } catch (error: any) {
       console.error("Login error:", error);
@@ -99,6 +113,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       setUser(newUser);
       await AsyncStorage.setItem("user", JSON.stringify(newUser));
+      await checkOnboardingStatus();
       return true;
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -108,6 +123,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = async () => {
     setUser(null);
+    setIsOnboarded(false);
     clearAuthStorage();
     await AsyncStorage.removeItem("user");
     await AsyncStorage.removeItem("token");
@@ -122,6 +138,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         logout,
         isAuthenticated: !!user,
         isLoading,
+        isOnboarded,
+        checkOnboardingStatus,
       }}
     >
       {children}

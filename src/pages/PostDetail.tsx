@@ -14,6 +14,8 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import EmptyState from "../components/common/EmptyState";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
+import { ScreenHeader } from "../components/common/ScreenHeader";
 
 const PostDetail = () => {
   const route = useRoute<any>();
@@ -159,14 +161,8 @@ const PostDetail = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#0f172a" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Post Details</Text>
-      </View>
-
+    <PageContainer style={styles.container} edges={['top']}>
+      <ScreenHeader title="Post Details" />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <Card style={styles.postCard}>
           <CardHeader>
@@ -260,7 +256,7 @@ const PostDetail = () => {
         onChange={setCommentText}
         onSubmit={handleAddComment}
       />
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 

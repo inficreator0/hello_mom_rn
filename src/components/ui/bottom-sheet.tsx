@@ -92,6 +92,7 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'flex-end',
+        backgroundColor: 'transparent',
     },
     overlay: {
         ...StyleSheet.absoluteFillObject,
@@ -99,15 +100,17 @@ const styles = StyleSheet.create({
     },
     content: {
         backgroundColor: '#ffffff', // background
-        padding: 24,
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12,
+        padding: 16,
+        paddingTop: 8, // Reduced to accommodate handle
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
         elevation: 10,
-        minHeight: 200,
+        minHeight: 300,
+        width: '100%',
     },
     handle: {
         alignSelf: 'center',
@@ -115,8 +118,8 @@ const styles = StyleSheet.create({
         height: 6,
         borderRadius: 3,
         backgroundColor: '#f1f5f9', // muted
-        marginTop: -12,
-        marginBottom: 16,
+        marginTop: 12,
+        marginBottom: 8,
     },
     header: {
         flexDirection: 'column',
@@ -128,6 +131,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
         gap: 8,
         marginTop: 16,
+        paddingBottom: 16, // Add padding for safe area
     },
     title: {
         fontSize: 18,
@@ -141,7 +145,7 @@ const styles = StyleSheet.create({
     closeButton: {
         position: 'absolute',
         right: 16,
-        top: 16,
+        top: 20,
     }
 })
 

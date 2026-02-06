@@ -14,6 +14,8 @@ import { PostCardSkeleton } from "./ui/skeleton";
 import { CommunityEmptyState } from "./common/CommunityEmptyState";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FilterBottomSheet } from "./common/FilterBottomSheet";
+import { PageContainer } from "./common/PageContainer";
+import { ScreenHeader } from "./common/ScreenHeader";
 
 const CATEGORIES: CommunityCategory[] = ["All", "Pregnancy", "Postpartum", "Feeding", "Sleep", "Mental Health", "Recovery", "Milestones"];
 
@@ -171,10 +173,10 @@ const Community = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <PageContainer style={styles.container}>
+      <ScreenHeader title="Community" showBackButton={false} />
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Community</Text>
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}
@@ -256,7 +258,7 @@ const Community = () => {
           onApply={handleApplyFilters}
         />
       </View>
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 const styles = StyleSheet.create({
@@ -269,13 +271,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   header: {
-    paddingVertical: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0f172a', // foreground
-    marginBottom: 12,
+    paddingVertical: 12,
   },
   searchBar: {
     marginBottom: 8,

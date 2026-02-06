@@ -2,8 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Activity, FileText, Stethoscope, Users } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -23,17 +22,12 @@ import { PeriodTracker } from './pages/PeriodTracker';
 import { BabyWeightTracker } from './pages/BabyWeightTracker';
 import { ComingSoon } from './pages/ComingSoon';
 
+import { ResetPassword } from './pages/ResetPassword';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Transparent theme to allow gradient to show through
-const TransparentTheme = {
-  ...DefaultTheme,
-  colors: {
-    ...DefaultTheme.colors,
-    background: 'transparent',
-  },
-};
+
 
 const MainTabs = () => {
   return (
@@ -99,35 +93,33 @@ const MainTabs = () => {
 };
 
 const Navigation = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isOnboarded } = useAuth();
 
   if (isLoading) {
     return null; // Or a splash screen
   }
 
   return (
-    <LinearGradient
-      colors={['#fbcfe8', '#fce7f3', '#ffffff',]} // White to Soft Pink
-      style={{ flex: 1 }}
-    >
-      <ThemeProvider value={TransparentTheme}>
-        <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
-          {!isAuthenticated ? (
-            <Stack.Screen name="Login" component={Login} />
-          ) : (
-            <>
-              <Stack.Screen name="Main" component={MainTabs} />
-              <Stack.Screen name="PostDetail" component={PostDetail} />
-              <Stack.Screen name="CreatePost" component={CreatePost} />
-              <Stack.Screen name="PeriodTracker" component={PeriodTracker} />
-              <Stack.Screen name="BabyWeightTracker" component={BabyWeightTracker} />
-              <Stack.Screen name="ComingSoon" component={ComingSoon} />
-              <Stack.Screen name="Onboarding" component={Onboarding} />
-            </>
-          )}
-        </Stack.Navigator>
-      </ThemeProvider>
-    </LinearGradient>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {!isAuthenticated ? (
+        <>
+          <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="ResetPassword" component={ResetPassword} />
+        </>
+      ) : !isOnboarded ? (
+        <Stack.Screen name="Onboarding" component={Onboarding} />
+      ) : (
+        <>
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="PostDetail" component={PostDetail} />
+          <Stack.Screen name="CreatePost" component={CreatePost} />
+          <Stack.Screen name="PeriodTracker" component={PeriodTracker} />
+          <Stack.Screen name="BabyWeightTracker" component={BabyWeightTracker} />
+          <Stack.Screen name="ComingSoon" component={ComingSoon} />
+          <Stack.Screen name="Onboarding" component={Onboarding} />
+        </>
+      )}
+    </Stack.Navigator>
   );
 };
 
@@ -137,7 +129,7 @@ export default function App() {
       <AuthProvider>
         <PreferencesProvider>
           <ToastProvider>
-            <StatusBar style="light" backgroundColor="black" />
+            <StatusBar style="light" backgroundColor="#603c58ff" />
             <Navigation />
           </ToastProvider>
         </PreferencesProvider>

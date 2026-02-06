@@ -9,6 +9,8 @@ import { useToast } from "../context/ToastContext";
 import { PeriodEntry, CycleData } from "../types";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
+import { ScreenHeader } from "../components/common/ScreenHeader";
 import Animated, { FadeInDown, FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 
 const STORAGE_KEY = "@period_tracker_data";
@@ -143,17 +145,16 @@ export const PeriodTracker = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#0f172a" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Period Tracker</Text>
-        <Button size="sm" onPress={handleAddPeriod}>
-          <Plus size={16} color="white" style={styles.addIcon} />
-          <Text style={styles.buttonText}>Log</Text>
-        </Button>
-      </View>
+    <PageContainer style={styles.container} edges={['top']}>
+      <ScreenHeader
+        title="Period Tracker"
+        rightElement={
+          <Button size="sm" onPress={handleAddPeriod}>
+            <Plus size={16} color="white" style={styles.addIcon} />
+            <Text style={styles.buttonText}>Log</Text>
+          </Button>
+        }
+      />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.statsRow}>
@@ -332,7 +333,7 @@ export const PeriodTracker = () => {
           </View>
         </DialogContent>
       </Dialog>
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 

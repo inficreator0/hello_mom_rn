@@ -4,6 +4,8 @@ import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Phone, Calendar, Stethoscope, Sparkles } from "lucide-react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { PageContainer } from "../components/common/PageContainer";
+import { ScreenHeader } from "../components/common/ScreenHeader";
 import { SvgUri } from "react-native-svg";
 
 interface Doctor {
@@ -71,11 +73,11 @@ export const Consultations = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <PageContainer style={styles.container} edges={['top']}>
+      <ScreenHeader title="Consult Experts" showBackButton={false} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Consult Experts</Text>
             <Text style={styles.subtitle}>Talk to trusted doctors instantly.</Text>
           </View>
           <View style={styles.sparkleIconWrapper}>
@@ -122,7 +124,7 @@ export const Consultations = () => {
           ))}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </PageContainer>
   );
 };
 
@@ -146,7 +148,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#0f172a', // foreground
-    marginBottom: 4,
   },
   subtitle: {
     color: '#64748b', // muted-foreground

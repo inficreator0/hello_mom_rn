@@ -21,7 +21,7 @@ Input.displayName = "Input"
 
 const styles = StyleSheet.create({
   input: {
-    height: 48,
+    height: 40,
     width: '100%',
     borderRadius: 6,
     borderWidth: 1,

@@ -43,6 +43,34 @@ export const authAPI = {
   logout: () => {
     clearAuthStorage();
   },
+
+  forgotPassword: async (email: string) => {
+    return await apiRequest<{ message: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword: async (data: { token: string; newPassword: string }) => {
+    return await apiRequest<{ message: string }>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  getOnboardingStatus: async () => {
+    return await apiRequest<{ isOnboarded: boolean; onboardingType: string | null }>(
+      "/api/users/me/onboarding",
+      { method: "GET" }
+    );
+  },
+
+  completeOnboarding: async (onboardingType: string) => {
+    return await apiRequest<{ message: string; isOnboarded: boolean }>("/api/users/me/onboarding", {
+      method: "POST",
+      body: JSON.stringify({ onboardingType }),
+    });
+  },
 };
 
 
