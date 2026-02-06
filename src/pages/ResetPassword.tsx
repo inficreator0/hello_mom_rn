@@ -74,9 +74,8 @@ export const ResetPassword = () => {
                         </CardHeader>
                         <CardContent style={styles.cardContent}>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Reset Token</Text>
                                 <Input
-                                    placeholder="Enter token from email"
+                                    placeholder="Reset Token *"
                                     value={token}
                                     onChangeText={setToken}
                                     editable={!isLoading}
@@ -84,9 +83,8 @@ export const ResetPassword = () => {
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>New Password</Text>
                                 <Input
-                                    placeholder="••••••••"
+                                    placeholder="New Password *"
                                     secureTextEntry
                                     value={newPassword}
                                     onChangeText={setNewPassword}
@@ -95,9 +93,8 @@ export const ResetPassword = () => {
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Confirm New Password</Text>
                                 <Input
-                                    placeholder="••••••••"
+                                    placeholder="Confirm New Password *"
                                     secureTextEntry
                                     value={confirmPassword}
                                     onChangeText={setConfirmPassword}
@@ -166,7 +163,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     cardTitle: {
-        fontSize: 24,
+        fontSize: 20,
         textAlign: 'center',
     },
     cardDescription: {

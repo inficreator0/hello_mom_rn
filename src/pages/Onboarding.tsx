@@ -3,7 +3,8 @@ import { View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Pla
 import { useNavigation } from "@react-navigation/native";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Baby, Users, ArrowRight } from "lucide-react-native";
+import { Baby, Users, ArrowRight, Heart } from "lucide-react-native";
+import { AnimatedHeart } from "../components/ui/AnimatedHeart";
 import { usePreferences } from "../context/PreferencesContext";
 import { useAuth } from "../context/AuthContext";
 import { authAPI } from "../lib/api/auth";
@@ -80,8 +81,11 @@ export const Onboarding = () => {
           showsVerticalScrollIndicator={false}
         >
           <Card style={styles.card}>
-            <CardHeader>
-              <CardTitle style={styles.cardTitle}>Welcome to Hello Mom</CardTitle>
+            <CardHeader style={styles.cardHeader}>
+              <View style={styles.iconContainer}>
+                <AnimatedHeart size={40} />
+              </View>
+              <CardTitle style={styles.cardTitle}>Welcome to Nova</CardTitle>
               <CardDescription>
                 Let's personalize your experience in a few steps.
               </CardDescription>
@@ -89,7 +93,7 @@ export const Onboarding = () => {
             <CardContent style={styles.cardContent}>
               {step === 1 && (
                 <View style={styles.stepContainer}>
-                  <Text style={styles.stepLabel}>How do you plan to use Hello Mom?</Text>
+                  <Text style={styles.stepLabel}>How do you plan to use Nova?</Text>
 
                   <Pressable
                     onPress={() => setSelectedPurpose("baby")}
@@ -142,10 +146,9 @@ export const Onboarding = () => {
                   <Text style={styles.stepLabel}>Tell us about your baby to help us personalize your feed.</Text>
 
                   <View>
-                    <Text style={styles.inputLabel}>Baby's Name (Optional)</Text>
                     <TextInput
                       style={styles.input}
-                      placeholder="e.g. Aanya"
+                      placeholder="Baby's Name (Optional)"
                       value={babyName}
                       onChangeText={setBabyName}
                     />
@@ -239,8 +242,17 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
   },
+  cardHeader: {
+    alignItems: 'center',
+  },
+  iconContainer: {
+    backgroundColor: 'rgba(255, 107, 107, 0.1)', // primary/10
+    padding: 20,
+    borderRadius: 9999,
+    marginBottom: 16,
+  },
   cardTitle: {
-    fontSize: 24,
+    fontSize: 20,
   },
   cardContent: {
     gap: 24,

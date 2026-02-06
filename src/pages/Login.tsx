@@ -6,7 +6,7 @@ import { usePreferences } from "../context/PreferencesContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Heart } from "lucide-react-native";
+import { AnimatedHeart } from "../components/ui/AnimatedHeart";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PageContainer } from "../components/common/PageContainer";
 
@@ -66,7 +66,7 @@ const Login = () => {
     return (
       <View style={styles.authLoadingContainer}>
         <ActivityIndicator color="#ec4899" size="large" />
-        <Text style={styles.authLoadingText}>Preparing Hello Mom for you...</Text>
+        <Text style={styles.authLoadingText}>Preparing Nova for you...</Text>
       </View>
     );
   }
@@ -85,10 +85,10 @@ const Login = () => {
           <Card style={styles.card}>
             <CardHeader style={styles.cardHeader}>
               <View style={styles.iconContainer}>
-                <Heart size={40} color="#ec4899" fill="#ec4899" />
+                <AnimatedHeart size={40} />
               </View>
               <CardTitle style={styles.cardTitle}>
-                {mode === "forgot" ? "Reset Password" : "Welcome to Hello Mom"}
+                {mode === "forgot" ? "Reset Password" : "Welcome to Nova"}
               </CardTitle>
               <CardDescription style={styles.cardDescription}>
                 {mode === "login"
@@ -101,9 +101,8 @@ const Login = () => {
             <CardContent style={styles.cardContent}>
               {(mode === "signup" || mode === "forgot") && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Email Address</Text>
                   <Input
-                    placeholder="jane@example.com"
+                    placeholder="Email Address *"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     value={email}
@@ -116,18 +115,16 @@ const Login = () => {
               {mode === "signup" && (
                 <>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>First Name</Text>
                     <Input
-                      placeholder="Jane"
+                      placeholder="First Name *"
                       value={firstName}
                       onChangeText={setFirstName}
                       editable={!isLoading}
                     />
                   </View>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Last Name</Text>
                     <Input
-                      placeholder="Doe"
+                      placeholder="Last Name *"
                       value={lastName}
                       onChangeText={setLastName}
                       editable={!isLoading}
@@ -139,9 +136,8 @@ const Login = () => {
               {mode !== "forgot" && (
                 <>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Username</Text>
                     <Input
-                      placeholder="janedoe"
+                      placeholder="Username *"
                       autoCapitalize="none"
                       value={username}
                       onChangeText={setUsername}
@@ -150,21 +146,21 @@ const Login = () => {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <View style={styles.labelRow}>
-                      <Text style={styles.label}>Password</Text>
-                      {mode === "login" && (
-                        <Pressable onPress={() => setModeState("forgot")}>
-                          <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-                        </Pressable>
-                      )}
-                    </View>
                     <Input
-                      placeholder="••••••••"
+                      placeholder="Password *"
                       secureTextEntry
                       value={password}
                       onChangeText={setPassword}
                       editable={!isLoading}
                     />
+                    {mode === "login" && (
+                      <Pressable
+                        onPress={() => setModeState("forgot")}
+                        style={styles.forgotPasswordContainer}
+                      >
+                        <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                      </Pressable>
+                    )}
                   </View>
                 </>
               )}
@@ -267,16 +263,10 @@ const styles = StyleSheet.create({
   inputGroup: {
     marginBottom: 4,
   },
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#0f172a',
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    marginRight: 4,
   },
   forgotPasswordText: {
     fontSize: 12,

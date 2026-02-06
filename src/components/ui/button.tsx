@@ -34,18 +34,23 @@ const Button = ({
       ]}
       {...props}
     >
-      {typeof children === 'string' ? (
-        <Text style={[
-          styles.text,
-          styles[`textVariant_${variant}` as keyof typeof styles],
-          styles[`textSize_${size}` as keyof typeof styles],
-          textStyle
-        ]}>
-          {children}
-        </Text>
-      ) : (
-        children
-      )}
+      {React.Children.map(children, (child) => {
+        if (typeof child === "string" || typeof child === "number") {
+          return (
+            <Text
+              style={[
+                styles.text,
+                styles[`textVariant_${variant}` as keyof typeof styles],
+                styles[`textSize_${size}` as keyof typeof styles],
+                textStyle,
+              ]}
+            >
+              {child}
+            </Text>
+          );
+        }
+        return child;
+      })}
     </Pressable>
   )
 }

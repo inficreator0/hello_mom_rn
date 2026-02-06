@@ -96,9 +96,8 @@ const CreatePost = () => {
 
                         <CardContent style={styles.cardContent}>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Title</Text>
                                 <Input
-                                    placeholder="Enter title"
+                                    placeholder="Title *"
                                     value={formData.title}
                                     onChangeText={(text) => handleChange("title", text)}
                                     editable={!isSubmitting}
@@ -126,10 +125,9 @@ const CreatePost = () => {
                             </View>
 
                             <View style={styles.inputGroup}>
-                                <Text style={styles.label}>Content</Text>
                                 <TextInput
                                     style={styles.contentTextarea}
-                                    placeholder="Write your post content here..."
+                                    placeholder="What's on your mind? Write your post content here..."
                                     multiline
                                     numberOfLines={8}
                                     textAlignVertical="top"

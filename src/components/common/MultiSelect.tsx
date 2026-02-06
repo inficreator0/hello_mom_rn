@@ -4,7 +4,7 @@ import { Check, ChevronDown, X } from "lucide-react-native";
 import { Button } from "../ui/button";
 
 interface MultiSelectProps {
-    label: string;
+    label?: string;
     options: string[];
     selectedValues: string[];
     onSelectionChange: (values: string[]) => void;
@@ -30,7 +30,7 @@ const MultiSelect = ({
 
     return (
         <View style={styles.container}>
-            <Text style={styles.label}>{label}</Text>
+            {label && <Text style={styles.label}>{label}</Text>}
             <Pressable
                 style={styles.trigger}
                 onPress={() => setModalVisible(true)}
@@ -52,7 +52,7 @@ const MultiSelect = ({
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select {label}</Text>
+                            <Text style={styles.modalTitle}>Select {label || "Options"}</Text>
                             <Pressable onPress={() => setModalVisible(false)}>
                                 <X size={24} color="#0f172a" />
                             </Pressable>
