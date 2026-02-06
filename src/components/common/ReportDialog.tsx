@@ -1,6 +1,6 @@
-import { useState } from "react";
+import * as React from "react";
+import { View, Text, TextInput, StyleSheet } from "react-native";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 
 interface ReportDialogProps {
@@ -14,8 +14,8 @@ const ReportDialog = ({
     onOpenChange,
     onSubmit,
 }: ReportDialogProps) => {
-    const [reason, setReason] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [reason, setReason] = React.useState("");
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
     const handleSubmit = async () => {
         if (!reason.trim() || isSubmitting) return;
@@ -30,38 +30,38 @@ const ReportDialog = ({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent onOpenChange={onOpenChange}>
                 <DialogHeader>
                     <DialogTitle>Report Post</DialogTitle>
                     <DialogDescription>
-                        Help us understand what's wrong with this post. Your report will be reviewed by our moderators.
+                        Help us understand what's wrong. Moderators will review your report.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid gap-2">
-                        <Textarea
-                            id="report-reason"
-                            placeholder="Tell us why you're reporting this (e.g., spam, harassment, incorrect information)..."
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                            rows={4}
-                            disabled={isSubmitting}
-                            className="focus-visible:ring-1 focus-visible:ring-offset-0"
-                            autoFocus
-                        />
-                    </div>
-                </div>
-                <DialogFooter>
+                <View style={styles.inputContainer}>
+                    <TextInput
+                        placeholder="Why are you reporting this? (e.g., spam, harassment)..."
+                        value={reason}
+                        onChangeText={setReason}
+                        multiline
+                        numberOfLines={4}
+                        editable={!isSubmitting}
+                        style={styles.input}
+                        textAlignVertical="top"
+                    />
+                </View>
+                <DialogFooter style={styles.footer}>
                     <Button
                         variant="outline"
-                        onClick={() => onOpenChange(false)}
+                        style={styles.flex1}
+                        onPress={() => onOpenChange(false)}
                         disabled={isSubmitting}
                     >
                         Cancel
                     </Button>
                     <Button
                         variant="destructive"
-                        onClick={handleSubmit}
+                        style={styles.flex1}
+                        onPress={handleSubmit}
                         disabled={isSubmitting || !reason.trim()}
                     >
                         {isSubmitting ? "Reporting..." : "Submit Report"}
@@ -71,5 +71,26 @@ const ReportDialog = ({
         </Dialog>
     );
 };
+
+const styles = StyleSheet.create({
+    inputContainer: {
+        paddingVertical: 16,
+    },
+    input: {
+        backgroundColor: '#f1f5f9', // muted
+        padding: 16,
+        borderRadius: 12,
+        minHeight: 100,
+        color: '#0f172a', // foreground
+        fontSize: 16,
+    },
+    footer: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    flex1: {
+        flex: 1,
+    },
+});
 
 export default ReportDialog;

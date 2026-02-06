@@ -1,18 +1,24 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, TextInput, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Edit, Calendar, Baby, Sparkles } from "lucide-react";
+import { Edit, Calendar, Baby, Sparkles } from "lucide-react-native";
 import PostCard from "../components/common/PostCard";
 import { useAuth } from "../context/AuthContext";
 import { postsAPI } from "../lib/api/posts";
 import { StatCardSkeleton, PostCardSkeleton } from "../components/ui/skeleton";
 import { usePreferences } from "../context/PreferencesContext";
 import { Post } from "../types";
+import { Badge } from "../components/ui/badge";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { SvgUri } from "react-native-svg";
 
-export const Profile = () => {
+import { useToast } from "../context/ToastContext";
+
+const Profile = () => {
   const { logout, user: authUser } = useAuth();
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
   const { mode, setMode, babyName, babyStage, firstTimeMom, focusAreas } =
     usePreferences();
 
@@ -30,52 +36,164 @@ export const Profile = () => {
     savedCount: 0,
   });
 
+  const { showToast } = useToast();
+
   const user = {
     name: authUser?.username || "User",
-    avatar:
-      "https://api.dicebear.com/8.x/fun-emoji/svg?seed=mother",
+    avatar: "https://api.dicebear.com/8.x/fun-emoji/svg?seed=mother",
     joinedAt: "2024-01-10",
   };
 
+  const updateLocalPost = (postId: string | number, updates: Partial<Post>) => {
+    setMyPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, ...updates } : p))
+    );
+  };
+
+  const handleVote = async (postId: string | number, voteType: "up" | "down") => {
+    const post = myPosts.find((p) => p.id === postId);
+    if (!post) return;
+
+    const currentVote = post.userVote;
+    let newVote: "up" | "down" | null = voteType;
+    let voteChange = 0;
+
+    if (currentVote === voteType) {
+      newVote = null;
+      voteChange = voteType === "up" ? -1 : 1;
+    } else {
+      if (currentVote === "up") voteChange -= 1;
+      if (currentVote === "down") voteChange += 1;
+
+      if (voteType === "up") voteChange += 1;
+      if (voteType === "down") voteChange -= 1;
+    }
+
+    // Optimistic Update
+    updateLocalPost(postId, {
+      userVote: newVote,
+      votes: (post.votes || 0) + voteChange,
+    });
+
+    try {
+      if (voteType === "up") {
+        await postsAPI.upvote(String(postId));
+      } else {
+        await postsAPI.downvote(String(postId));
+      }
+    } catch (error) {
+      console.error("Vote failed", error);
+      showToast("Failed to vote", "error");
+      updateLocalPost(postId, {
+        userVote: currentVote,
+        votes: post.votes,
+      });
+    }
+  };
+
+  const handleEdit = (post: Post) => {
+    navigation.navigate("CreatePost", { post });
+  };
+
+  const handleDelete = async (postId: string | number) => {
+    try {
+      await postsAPI.delete(String(postId));
+      showToast("Post deleted", "success");
+
+      // Update local state
+      setMyPosts(prev => prev.filter(p => p.id !== postId));
+      setBookmarks(prev => prev.filter(p => p.id !== postId));
+
+      // Also update stats if needed
+      setStats(prev => ({
+        ...prev,
+        postsCount: Math.max(0, prev.postsCount - 1)
+      }));
+    } catch (error) {
+      console.error("Delete failed", error);
+      showToast("Failed to delete post", "error");
+    }
+  };
+
+  const handleReport = async (postId: string | number, reason: string) => {
+    try {
+      await postsAPI.report(String(postId), reason);
+      showToast("Post reported", "success");
+    } catch (error) {
+      console.error("Report failed", error);
+      showToast("Failed to report post", "error");
+    }
+  };
+
+  const handleBookmark = async (postId: string | number) => {
+    const post = myPosts.find((p) => p.id === postId);
+    if (!post) return;
+
+    const isBookmarked = post.bookmarked;
+    const newBookmarkedState = !isBookmarked;
+
+    updateLocalPost(postId, { bookmarked: newBookmarkedState });
+
+    try {
+      if (newBookmarkedState) {
+        await postsAPI.save(String(postId));
+        showToast("Post saved", "success");
+      } else {
+        await postsAPI.unsave(String(postId));
+        showToast("Post removed from saved", "success");
+      }
+    } catch (error) {
+      console.error("Bookmark failed", error);
+      showToast("Failed to update bookmark", "error");
+      updateLocalPost(postId, { bookmarked: isBookmarked });
+    }
+  };
+
   const handleLogout = () => {
-    logout();
-    navigate("/login", { replace: true });
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Logout",
+          onPress: async () => {
+            await logout();
+            // Navigation handled by App.tsx
+          }
+        }
+      ]
+    );
   };
 
   useEffect(() => {
-    let isMounted = true;
-
     const fetchProfileData = async () => {
-      if (!isMounted) return;
       setIsLoading(true);
       try {
-        // Fetch my posts
         const myPostsResponse = await postsAPI.getMyPosts(0, 20);
-        if (!isMounted) return;
-
-        const mappedPosts = myPostsResponse.content.map((p: any) => ({
-          id: p.id,
-          title: p.title,
-          content: p.content,
-          author: p.authorUsername,
-          authorId: p.authorId,
-          authorUsername: p.authorUsername,
-          category: p.category || "General",
-          flair: p.flair,
-          votes: (p.upvotes || 0) - (p.downvotes || 0),
-          userVote: (p.currentUserVote === "UPVOTE" ? "up" : p.currentUserVote === "DOWNVOTE" ? "down" : null) as "up" | "down" | null,
-          bookmarked: p.saved || false,
-          createdAt: new Date(p.createdAt),
-          updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
-          comments: [],
-          commentCount: p.commentCount || 0,
-        }));
+        const mappedPosts = myPostsResponse.content.map((p: any) => {
+          if (p.currentUserVote) console.log(`[Profile] Post ${p.id} vote:`, p.currentUserVote);
+          return {
+            id: p.id,
+            title: p.title,
+            content: p.content,
+            author: p.authorUsername,
+            authorId: p.authorId,
+            authorUsername: p.authorUsername,
+            category: p.category || "General",
+            flair: p.flair,
+            votes: (p.upvotes || 0) - (p.downvotes || 0),
+            userVote: (p.currentUserVote === "UPVOTE" ? "up" : p.currentUserVote === "DOWNVOTE" ? "down" : null) as "up" | "down" | null,
+            bookmarked: p.saved || false,
+            createdAt: new Date(p.createdAt),
+            updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
+            comments: [],
+            commentCount: p.commentCount || 0,
+          }
+        });
         setMyPosts(mappedPosts);
 
-        // Fetch saved posts
         const savedPostsResponse = await postsAPI.getSavedPosts(0, 20);
-        if (!isMounted) return;
-
         const mappedSavedPosts = savedPostsResponse.content.map((p: any) => ({
           id: p.id,
           title: p.title,
@@ -95,11 +213,8 @@ export const Profile = () => {
         }));
         setBookmarks(mappedSavedPosts);
 
-        // Fetch user stats if username available
         if (authUser?.username) {
           const statsResponse = await postsAPI.getUserStats(authUser.username);
-          if (!isMounted) return;
-
           setStats({
             postsCount: statsResponse.postsCount,
             commentsCount: statsResponse.commentsCount,
@@ -110,254 +225,387 @@ export const Profile = () => {
       } catch (error) {
         console.error("Error fetching profile data:", error);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
 
     fetchProfileData();
-
-    return () => {
-      isMounted = false;
-    };
   }, [authUser?.username]);
 
+  const formatDate = (date: Date | string) => {
+    const dateObj = typeof date === "string" ? new Date(date) : date;
+    return dateObj.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+    });
+  };
+
   return (
-    <div className="pb-24">
-      <div className="container max-w-4xl px-4 py-8">
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
-        <div className="flex flex-col gap-4 mb-8">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <img
-                src={user.avatar}
-                alt="Profile"
-                className="w-24 h-24 rounded-full shadow-md"
+        <View style={styles.header}>
+          <View style={styles.userInfo}>
+            <View style={styles.avatarContainer}>
+              <SvgUri
+                width="100%"
+                height="100%"
+                uri={user.avatar}
               />
+            </View>
+            <View style={styles.userNameContainer}>
+              <Text style={styles.userName}>{user.name}</Text>
+              <View style={styles.joinedDateContainer}>
+                <Calendar size={14} color="#64748b" style={styles.calendarIcon} />
+                <Text style={styles.joinedDate}>Joined {formatDate(user.joinedAt)}</Text>
+              </View>
+            </View>
+          </View>
+          <Button variant="outline" size="sm" onPress={handleLogout}>
+            Logout
+          </Button>
+        </View>
 
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  {user.name}
-                </h1>
-
-                <div className="flex items-center text-muted-foreground text-sm mt-1">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Joined{" "}
-                  {new Date(user.joinedAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "short",
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <Button variant="outline" onClick={handleLogout}>
-              Logout
-            </Button>
-          </div>
-        </div>
-
-        {/* BIO SECTION */}
-        <Card className="mb-8 bg-card text-card-foreground border border-border/60 shadow-sm animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-start">
-              <h2 className="text-lg font-semibold">About Me</h2>
-
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setIsEditingBio(!isEditingBio)}
-              >
-                <Edit className="w-4 h-4 mr-1" />
-                Edit
-              </Button>
-            </div>
+        {/* Bio */}
+        <Card style={styles.bioCard}>
+          <CardContent style={styles.bioCardContent}>
+            <View style={styles.bioHeader}>
+              <Text style={styles.sectionTitle}>About Me</Text>
+              <Pressable onPress={() => setIsEditingBio(!isEditingBio)} style={styles.editButton}>
+                <Edit size={18} color="#ec4899" />
+              </Pressable>
+            </View>
 
             {isEditingBio ? (
-              <textarea
-                className="w-full mt-4 border bg-background rounded-md p-3 text-sm"
-                rows={4}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground mt-3">
-                {bio}
-              </p>
-            )}
-
-            {isEditingBio && (
-              <div className="flex justify-end mt-4">
-                <Button size="sm" onClick={() => setIsEditingBio(false)}>
+              <View>
+                <TextInput
+                  style={styles.bioInput}
+                  multiline
+                  value={bio}
+                  onChangeText={setBio}
+                />
+                <Button style={styles.saveBioButton} size="sm" onPress={() => setIsEditingBio(false)}>
                   Save
                 </Button>
-              </div>
+              </View>
+            ) : (
+              <Text style={styles.bioText}>
+                {bio}
+              </Text>
             )}
           </CardContent>
         </Card>
 
-        {/* Feature settings */}
-        <Card className="mb-8 bg-card text-card-foreground border border-border/60 shadow-sm animate-in fade-in-0 slide-in-from-bottom-2 duration-300 delay-75">
-          <CardContent className="pt-6 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Baby className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-semibold">Baby features</h2>
-              </div>
-              <span className="text-xs rounded-full px-2 py-1 bg-muted text-muted-foreground">
+        {/* Mode Settings */}
+        <Card style={styles.settingsCard}>
+          <CardContent style={styles.settingsCardContent}>
+            <View style={styles.settingsHeader}>
+              <View style={styles.settingsHeaderLeft}>
+                <Baby size={20} color="#ec4899" style={styles.babyIcon} />
+                <Text style={styles.sectionTitle}>Baby Features</Text>
+              </View>
+              <Badge variant={mode === "baby" ? "default" : "secondary"}>
                 {mode === "baby" ? "Enabled" : "Disabled"}
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Control whether baby-focused trackers and tools are highlighted in your app.
-            </p>
-            <div className="flex gap-2">
+              </Badge>
+            </View>
+            <Text style={styles.settingsDescription}>
+              Focus on baby-themed trackers and tools across the app.
+            </Text>
+            <View style={styles.modeButtons}>
               <Button
-                size="sm"
+                style={styles.flex1}
                 variant={mode === "baby" ? "default" : "outline"}
-                onClick={() => setMode("baby")}
+                onPress={() => setMode("baby")}
               >
-                Enable baby mode
+                Baby Mode
               </Button>
               <Button
-                size="sm"
+                style={styles.flex1}
                 variant={mode === "community" ? "default" : "outline"}
-                onClick={() => setMode("community")}
+                onPress={() => setMode("community")}
               >
-                Community only
+                Community
               </Button>
-            </div>
+            </View>
           </CardContent>
         </Card>
 
-        {/* Baby info (if available) */}
-        {mode === "baby" && (babyName || babyStage || firstTimeMom || (focusAreas && focusAreas.length > 0)) && (
-          <Card className="mb-8 bg-gradient-to-r from-primary/10 via-accent/10 to-secondary/10 border border-primary/30 shadow-md animate-in fade-in-0 slide-in-from-bottom-2 duration-300 delay-100">
-            <CardContent className="pt-6 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h2 className="text-lg font-semibold">Baby profile</h2>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                We use this to highlight the most relevant tools and trackers for you.
-              </p>
-              <div className="flex flex-wrap gap-3 text-sm">
+        {/* Baby Info */}
+        {mode === "baby" && (babyName || babyStage) && (
+          <Card style={styles.babyProfileCard}>
+            <CardContent style={styles.babyProfileContent}>
+              <View style={styles.babyHeader}>
+                <Sparkles size={20} color="#ec4899" style={styles.sparklesIcon} />
+                <Text style={styles.sectionTitle}>Baby Profile</Text>
+              </View>
+              <View style={styles.badgeContainer}>
                 {babyName && (
-                  <div className="px-3 py-1 rounded-full bg-background/70 border border-primary/30">
-                    <span className="font-medium">Name:</span> {babyName}
-                  </div>
+                  <View style={styles.babyBadge}>
+                    <Text style={styles.badgeText}><Text style={styles.boldText}>Name:</Text> {babyName}</Text>
+                  </View>
                 )}
                 {babyStage && (
-                  <div className="px-3 py-1 rounded-full bg-background/70 border border-primary/30">
-                    <span className="font-medium">Stage:</span>{" "}
-                    {babyStage === "newborn"
-                      ? "0–3 months"
-                      : babyStage === "infant"
-                        ? "3–12 months"
-                        : babyStage === "toddler"
-                          ? "1–3 years"
-                          : "Pregnancy"}
-                  </div>
+                  <View style={styles.babyBadge}>
+                    <Text style={styles.badgeText}><Text style={styles.boldText}>Stage:</Text> {babyStage}</Text>
+                  </View>
                 )}
-                {firstTimeMom && (
-                  <div className="px-3 py-1 rounded-full bg-background/70 border border-primary/30">
-                    <span className="font-medium">First-time mom:</span>{" "}
-                    {firstTimeMom === "yes" ? "Yes" : "No"}
-                  </div>
-                )}
-              </div>
-              {focusAreas && focusAreas.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Current focus areas
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {focusAreas.map((area) => (
-                      <span
-                        key={area}
-                        className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs border border-primary/30"
-                      >
-                        {area}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              </View>
             </CardContent>
           </Card>
         )}
 
-        {/* USER STATS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          {isLoading ? (
-            <>
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-              <StatCardSkeleton />
-            </>
-          ) : (
-            <>
-              <StatCard label="Posts" value={stats.postsCount} />
-              <StatCard label="Comments" value={stats.commentsCount} />
-              <StatCard label="Bookmarks" value={stats.savedCount} />
-              <StatCard label="Upvotes" value={stats.totalUpvotesReceived} />
-            </>
-          )}
-        </div>
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          <StatCard label="Posts" value={stats.postsCount} />
+          <StatCard label="Comments" value={stats.commentsCount} />
+          <StatCard label="Bookmarks" value={stats.savedCount} />
+          <StatCard label="Upvotes" value={stats.totalUpvotesReceived} />
+        </View>
 
-        {/* Recent Posts */}
-        <h2 className="text-lg font-semibold mb-3">My Recent Posts</h2>
-
+        {/* My Posts */}
+        <Text style={styles.sectionTitleLarge}>My Recent Posts</Text>
         {isLoading ? (
-          <div className="space-y-4">
+          <View style={styles.postsList}>
             <PostCardSkeleton />
             <PostCardSkeleton />
-            <PostCardSkeleton />
-          </div>
+          </View>
         ) : myPosts.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-center text-muted-foreground">
-                You haven't posted anything yet.
-              </p>
-            </CardContent>
-          </Card>
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>You haven't posted anything yet.</Text>
+          </View>
         ) : (
-          <div className="space-y-4">
+          <View style={styles.postsList}>
             {myPosts.map((post) => (
               <PostCard
                 key={post.id}
                 post={post}
-                formatDate={(d) =>
-                  new Date(d).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                }
-                onEdit={() => { }}
-                onDelete={() => { }}
-                onVote={() => { }}
-                onBookmark={() => { }}
-                onReply={() => { }}
+                onVote={handleVote}
+                onBookmark={handleBookmark}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onReport={handleReport}
               />
             ))}
-          </div>
+          </View>
         )}
-      </div>
-    </div>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
-
 const StatCard = ({ label, value }: { label: string; value: number }) => (
-  <Card className="bg-card text-card-foreground">
-    <CardContent className="pt-6 text-center">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="text-xl font-semibold text-foreground">{value}</p>
+  <Card style={styles.statCard}>
+    <CardContent style={styles.statCardContent}>
+      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
     </CardContent>
   </Card>
 );
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent', // background
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 32,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f1f5f9', // muted
+    overflow: 'hidden',
+  },
+  userNameContainer: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0f172a', // foreground
+  },
+  joinedDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  calendarIcon: {
+    marginRight: 4,
+  },
+  joinedDate: {
+    fontSize: 12,
+    color: '#64748b', // muted-foreground
+  },
+  bioCard: {
+    marginBottom: 24,
+  },
+  bioCardContent: {
+    paddingTop: 24,
+  },
+  bioHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  sectionTitleLarge: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#0f172a',
+  },
+  editButton: {
+    padding: 8,
+  },
+  bioInput: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0', // input
+    backgroundColor: '#ffffff', // background
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: '#0f172a',
+    minHeight: 100,
+  },
+  saveBioButton: {
+    marginTop: 8,
+    alignSelf: 'flex-end',
+  },
+  bioText: {
+    fontSize: 14,
+    color: '#64748b', // muted-foreground
+    lineHeight: 20,
+  },
+  settingsCard: {
+    marginBottom: 24,
+  },
+  settingsCardContent: {
+    paddingTop: 24,
+  },
+  settingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  settingsHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  babyIcon: {
+    marginRight: 8,
+  },
+  settingsDescription: {
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 16,
+  },
+  modeButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  flex1: {
+    flex: 1,
+  },
+  babyProfileCard: {
+    marginBottom: 24,
+    backgroundColor: 'rgba(255, 107, 107, 0.05)', // primary/5
+    borderColor: 'rgba(255, 107, 107, 0.2)', // primary/20
+  },
+  babyProfileContent: {
+    paddingTop: 24,
+  },
+  babyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sparklesIcon: {
+    marginRight: 8,
+  },
+  badgeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  babyBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.2)',
+  },
+  badgeText: {
+    fontSize: 12,
+    color: '#0f172a',
+  },
+  boldText: {
+    fontWeight: 'bold',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 32,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+  },
+  statCardContent: {
+    paddingTop: 24,
+    alignItems: 'center',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  loadingIndicator: {
+    paddingVertical: 40,
+  },
+  emptyState: {
+    padding: 32,
+    alignItems: 'center',
+    backgroundColor: '#ffffff', // card
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0', // border
+  },
+  emptyStateText: {
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  postsList: {
+    gap: 16,
+    paddingBottom: 40,
+  },
+});
+
+export { Profile };

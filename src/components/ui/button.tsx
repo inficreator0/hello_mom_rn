@@ -1,57 +1,140 @@
 import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
+import { Pressable, Text, StyleSheet, ViewStyle, TextStyle } from "react-native"
 
-import { cn } from "../../lib/utils"
-
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:scale-105 active:scale-95",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm hover:shadow-md",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm hover:shadow-md",
-        outline:
-          "border-2 border-input bg-background hover:bg-accent/50 hover:text-accent-foreground hover:border-primary/30",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
-        ghost: "hover:bg-accent/50 hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline hover:text-primary/80",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean
+export interface ButtonProps {
+  variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+  onPress?: () => void;
+  children?: React.ReactNode;
+  style?: ViewStyle | ViewStyle[];
+  textStyle?: TextStyle | TextStyle[];
+  disabled?: boolean;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
-    return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Button.displayName = "Button"
+const Button = ({
+  style,
+  textStyle,
+  variant = 'default',
+  size = 'default',
+  children,
+  onPress,
+  disabled,
+  ...props
+}: ButtonProps) => {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={[
+        styles.button,
+        styles[`variant_${variant}` as keyof typeof styles],
+        styles[`size_${size}` as keyof typeof styles],
+        disabled && styles.disabled,
+        style,
+      ]}
+      {...props}
+    >
+      {typeof children === 'string' ? (
+        <Text style={[
+          styles.text,
+          styles[`textVariant_${variant}` as keyof typeof styles],
+          styles[`textSize_${size}` as keyof typeof styles],
+          textStyle
+        ]}>
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
+    </Pressable>
+  )
+}
 
-export { Button, buttonVariants }
+const styles = StyleSheet.create({
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+  },
+  disabled: {
+    opacity: 0.5,
+  },
+  variant_default: {
+    backgroundColor: '#ec4899', // primary
+  },
+  variant_destructive: {
+    backgroundColor: '#ef4444',
+  },
+  variant_outline: {
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    backgroundColor: 'transparent',
+  },
+  variant_secondary: {
+    backgroundColor: '#f1f5f9',
+  },
+  variant_ghost: {
+    backgroundColor: 'transparent',
+  },
+  variant_link: {
+    backgroundColor: 'transparent',
+  },
+  size_default: {
+    height: 48,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  size_sm: {
+    height: 40,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  size_lg: {
+    height: 56,
+    paddingHorizontal: 40,
+    paddingVertical: 16,
+  },
+  size_icon: {
+    height: 48,
+    width: 48,
+  },
+  text: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  textVariant_default: {
+    color: '#ffffff',
+  },
+  textVariant_destructive: {
+    color: '#ffffff',
+  },
+  textVariant_outline: {
+    color: '#0f172a',
+  },
+  textVariant_secondary: {
+    color: '#0f172a',
+  },
+  textVariant_ghost: {
+    color: '#0f172a',
+  },
+  textVariant_link: {
+    color: '#ec4899',
+    textDecorationLine: 'underline',
+  },
+  textSize_default: {
+    fontSize: 16,
+  },
+  textSize_sm: {
+    fontSize: 14,
+  },
+  textSize_lg: {
+    fontSize: 18,
+  },
+  textSize_icon: {
+    fontSize: 16,
+  },
+})
+
+export { Button }
 

@@ -1,3 +1,5 @@
+import * as React from "react";
+import { View, StyleSheet } from "react-native";
 import {
     Dialog,
     DialogContent,
@@ -31,24 +33,24 @@ const ConfirmationDialog = ({
 }: ConfirmationDialogProps) => {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent onOpenChange={onOpenChange}>
                 <DialogHeader>
                     <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>{description}</DialogDescription>
                 </DialogHeader>
-                <DialogFooter className="sm:justify-end gap-2">
+                <DialogFooter style={styles.footer}>
                     <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => onOpenChange(false)}
+                        variant="outline"
+                        style={styles.button}
+                        onPress={() => onOpenChange(false)}
                         disabled={isLoading}
                     >
                         {cancelLabel}
                     </Button>
                     <Button
-                        type="button"
                         variant="destructive"
-                        onClick={onConfirm}
+                        style={styles.button}
+                        onPress={onConfirm}
                         disabled={isLoading}
                     >
                         {isLoading ? "Processing..." : confirmLabel}
@@ -58,5 +60,16 @@ const ConfirmationDialog = ({
         </Dialog>
     );
 };
+
+const styles = StyleSheet.create({
+    footer: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 16,
+    },
+    button: {
+        flex: 1,
+    },
+});
 
 export default ConfirmationDialog;

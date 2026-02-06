@@ -1,22 +1,20 @@
-import React from "react";
+import * as React from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { Card, CardContent } from "../components/ui/card";
 import {
-  Heart,
-  Flame,
   Baby,
   Moon,
   Smile,
   Droplets,
-  Activity,
   Calendar,
-  Timer,
   BabyIcon,
   Utensils,
   Ruler,
-  NotebookPen,
-} from "lucide-react";
+  Flame,
+} from "lucide-react-native";
 import { usePreferences } from "../context/PreferencesContext";
-import { useNavigate } from "react-router-dom";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 interface TrackerCard {
   id: string;
@@ -24,6 +22,7 @@ interface TrackerCard {
   icon: any;
   description: string;
   lastEntry?: string;
+  path?: string;
 }
 
 const trackers: TrackerCard[] = [
@@ -33,6 +32,7 @@ const trackers: TrackerCard[] = [
     icon: Calendar,
     description: "Track period, ovulation & PMS symptoms",
     lastEntry: "Last period: Jan 10",
+    path: "PeriodTracker",
   },
   {
     id: "pregnancy",
@@ -41,20 +41,6 @@ const trackers: TrackerCard[] = [
     description: "Track week-by-week pregnancy changes",
     lastEntry: "Week 22 • Baby size: Papaya",
   },
-  // {
-  //   id: "kick-counter",
-  //   name: "Kick Counter",
-  //   icon: Activity,
-  //   description: "Monitor baby’s daily movement patterns",
-  //   lastEntry: "Last session: 32 kicks",
-  // },
-  // {
-  //   id: "contraction",
-  //   name: "Contraction Timer",
-  //   icon: Timer,
-  //   description: "Measure interval & duration during labor",
-  //   lastEntry: "No recent contractions",
-  // },
   {
     id: "mood",
     name: "Mood & Mental Health",
@@ -83,15 +69,6 @@ const trackers: TrackerCard[] = [
     description: "Track pregnancy & postpartum weight",
     lastEntry: "62.4 kg",
   },
-  // {
-  //   id: "symptoms",
-  //   name: "Symptoms",
-  //   icon: NotebookPen,
-  //   description: "Log nausea, fatigue, cramps & more",
-  //   lastEntry: "2 symptoms today",
-  // },
-
-  // Baby trackers
   {
     id: "feeding",
     name: "Baby Feeding",
@@ -105,6 +82,7 @@ const trackers: TrackerCard[] = [
     icon: Ruler,
     description: "Track weight, height & head size",
     lastEntry: "Updated 3 days ago",
+    path: "BabyWeightTracker",
   },
   {
     id: "meal",
@@ -117,69 +95,141 @@ const trackers: TrackerCard[] = [
 
 export const Trackers = () => {
   const { mode } = usePreferences();
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
 
-  const onTrackerOpen = (trackerId: string) => {
-    if (trackerId === "cycle") {
-      navigate("/trackers/period");
-    } else if (trackerId === "weight" || trackerId === "growth") {
-      navigate("/trackers/baby-weight");
+  const onTrackerOpen = (tracker: TrackerCard) => {
+    if (tracker.path) {
+      navigation.navigate(tracker.path);
     } else {
-      // Find the tracker name for the coming soon page
-      const tracker = trackers.find((t) => t.id === trackerId);
-      navigate("/trackers/coming-soon", {
-        state: { trackerName: tracker?.name || "this tracker" },
-      });
+      navigation.navigate("ComingSoon", { trackerName: tracker.name });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background pb-20">
-      <div className="container max-w-5xl px-4 py-8">
-        <h1 className="text-2xl font-bold text-foreground mb-2">Health Trackers</h1>
-        <p className="text-muted-foreground text-sm mb-6">
-          {mode === "baby"
-            ? "Track your pregnancy, postpartum recovery, and your baby's daily routine."
-            : "Track your own health, mood, and recovery. You can enable baby-focused trackers from your profile anytime."}
-        </p>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.flex1} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Health Trackers</Text>
+          <Text style={styles.subtitle}>
+            {mode === "baby"
+              ? "Track your pregnancy, recovery, and your baby's daily routine."
+              : "Track your own health, mood, and recovery."}
+          </Text>
+        </View>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+        <View style={styles.trackersList}>
           {trackers
             .filter((tracker) =>
               mode === "baby"
                 ? true
-                : !["feeding", "growth", "meal"].includes(tracker.id)
+                : !["feeding", "growth", "meal", "pregnancy"].includes(tracker.id)
             )
-            .map((tracker) => (
-              <Card
-                key={tracker.id}
-                className="bg-card shadow-sm rounded-lg cursor-pointer hover:shadow-lg hover:-translate-y-1 transition border border-border/50"
-                onClick={() => onTrackerOpen(tracker.id)}
-              >
-                <CardContent className="flex flex-row items-center gap-4 py-5">
-                  {/* Icon */}
-                  <div className="p-3 rounded-full bg-primary/10 text-primary">
-                    <tracker.icon className="h-6 w-6" />
-                  </div>
+            .map((tracker) => {
+              const Icon = tracker.icon;
+              return (
+                <Card key={tracker.id} style={styles.trackerCard}>
+                  <Pressable
+                    onPress={() => onTrackerOpen(tracker)}
+                    style={({ pressed }) => [
+                      styles.cardPressable,
+                      pressed && styles.cardPressed
+                    ]}
+                  >
+                    <CardContent style={styles.cardContent}>
+                      <View style={styles.iconContainer}>
+                        <Icon size={24} color="#ec4899" />
+                      </View>
 
-                  {/* Text */}
-                  <div className="flex flex-col flex-1">
-                    <h3 className="font-medium text-lg">{tracker.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {tracker.description}
-                    </p>
-
-                    {tracker.lastEntry && (
-                      <p className="text-xs mt-2 text-primary font-medium">
-                        {tracker.lastEntry}
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-        </div>
-      </div>
-    </div>
+                      <View style={styles.textContainer}>
+                        <Text style={styles.trackerName}>{tracker.name}</Text>
+                        <Text style={styles.trackerDescription}>
+                          {tracker.description}
+                        </Text>
+                        {tracker.lastEntry && (
+                          <Text style={styles.lastEntry}>
+                            {tracker.lastEntry}
+                          </Text>
+                        )}
+                      </View>
+                    </CardContent>
+                  </Pressable>
+                </Card>
+              );
+            })}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent', // background
+  },
+  flex1: {
+    flex: 1,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#0f172a', // foreground
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#64748b', // muted-foreground
+    marginBottom: 8,
+  },
+  trackersList: {
+    paddingHorizontal: 16,
+    gap: 16,
+    paddingBottom: 40,
+  },
+  trackerCard: {
+    overflow: 'hidden',
+  },
+  cardPressable: {
+    width: '100%',
+  },
+  cardPressed: {
+    opacity: 0.7,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  iconContainer: {
+    padding: 12,
+    borderRadius: 9999,
+    backgroundColor: 'rgba(255, 107, 107, 0.1)', // primary/10
+  },
+  textContainer: {
+    flex: 1,
+  },
+  trackerName: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#0f172a',
+  },
+  trackerDescription: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  lastEntry: {
+    fontSize: 10,
+    color: '#ec4899', // primary
+    fontWeight: 'bold',
+    marginTop: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+});

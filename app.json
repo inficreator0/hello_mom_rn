@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Nova",
+    "slug": "nova",
+    "scheme": "nova",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./public/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./public/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./public/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.inficreator.hellomomrn"
+    },
+    "web": {
+      "favicon": "./public/favicon.ico"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "22bc4fa5-8154-481f-af47-0ac04a2fd5de"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {}
+  }
+}

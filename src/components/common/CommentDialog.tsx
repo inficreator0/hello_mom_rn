@@ -1,6 +1,6 @@
-import { useState } from "react";
+import * as React from "react";
+import { View, TextInput, StyleSheet } from "react-native";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
 
 interface CommentDialogProps {
@@ -28,7 +28,7 @@ const CommentDialog = ({
   cancelLabel = "Cancel",
   placeholder = "Write your comment here...",
 }: CommentDialogProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
@@ -42,34 +42,35 @@ const CommentDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent onOpenChange={onOpenChange}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Textarea
-              id="comment"
-              placeholder={placeholder}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              rows={4}
-              disabled={isSubmitting}
-              className="focus-visible:ring-1 focus-visible:ring-offset-0"
-            />
-          </div>
-        </div>
-        <DialogFooter>
+        <View style={styles.inputContainer}>
+          <TextInput
+            placeholder={placeholder}
+            value={value}
+            onChangeText={onChange}
+            multiline
+            numberOfLines={4}
+            editable={!isSubmitting}
+            style={styles.input}
+            textAlignVertical="top"
+          />
+        </View>
+        <DialogFooter style={styles.footer}>
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            style={styles.flex1}
+            onPress={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
             {cancelLabel}
           </Button>
           <Button
-            onClick={handleSubmit}
+            style={styles.flex1}
+            onPress={handleSubmit}
             disabled={isSubmitting || !value.trim()}
           >
             {isSubmitting ? "Posting..." : submitLabel}
@@ -79,6 +80,27 @@ const CommentDialog = ({
     </Dialog>
   );
 };
+
+const styles = StyleSheet.create({
+  inputContainer: {
+    paddingVertical: 16,
+  },
+  input: {
+    backgroundColor: '#f1f5f9', // muted
+    padding: 16,
+    borderRadius: 12,
+    minHeight: 100,
+    color: '#0f172a', // foreground
+    fontSize: 16,
+  },
+  footer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  flex1: {
+    flex: 1,
+  },
+});
 
 export default CommentDialog;
 

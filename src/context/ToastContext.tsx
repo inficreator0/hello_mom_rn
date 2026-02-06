@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import * as React from "react";
+import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { View, Text, Pressable, StyleSheet, Dimensions } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type ToastType = "success" | "error" | "info";
 
@@ -47,31 +50,78 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {/* Toast container */}
-      <div className="fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 pointer-events-none px-4">
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`pointer-events-auto max-w-sm w-full rounded-md border shadow-lg px-4 py-3 text-sm flex items-start justify-between gap-3
-              ${
+      <View style={styles.container} pointerEvents="box-none">
+        <SafeAreaView pointerEvents="box-none">
+          {toasts.map((toast) => (
+            <View
+              key={toast.id}
+              style={[
+                styles.toast,
                 toast.type === "success"
-                  ? "bg-emerald-600 border-emerald-700 text-emerald-50"
+                  ? styles.success
                   : toast.type === "error"
-                  ? "bg-red-600 border-red-700 text-red-50"
-                  : "bg-slate-800 border-slate-700 text-slate-50"
-              }`}
-          >
-            <span>{toast.message}</span>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="text-xs opacity-70 hover:opacity-100"
+                    ? styles.error
+                    : styles.info
+              ]}
             >
-              ✕
-            </button>
-          </div>
-        ))}
-      </div>
+              <Text style={styles.text}>{toast.message}</Text>
+              <Pressable onPress={() => removeToast(toast.id)}>
+                <Text style={styles.close}>✕</Text>
+              </Pressable>
+            </View>
+          ))}
+        </SafeAreaView>
+      </View>
     </ToastContext.Provider>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  toast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    width: Dimensions.get('window').width - 32,
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  success: {
+    backgroundColor: '#10b981',
+  },
+  error: {
+    backgroundColor: '#ef4444',
+  },
+  info: {
+    backgroundColor: '#334155',
+  },
+  text: {
+    color: '#ffffff',
+    fontSize: 14,
+    flex: 1,
+  },
+  close: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginLeft: 12,
+    opacity: 0.8,
+  }
+});
 
 

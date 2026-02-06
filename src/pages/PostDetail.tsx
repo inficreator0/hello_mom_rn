@@ -1,95 +1,63 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Trash2, ArrowBigUp, ArrowBigDown, MessageSquare, Bookmark, BookmarkCheck, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet } from "react-native";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import { ArrowLeft, Trash2, ArrowBigUp, ArrowBigDown, MessageSquare, Bookmark, BookmarkCheck } from "lucide-react-native";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { usePostsStore } from "../store/postsStore";
 import { postsAPI, commentsAPI } from "../lib/api/posts";
 import CommentDialog from "../components/common/CommentDialog";
 import ReplyDialog from "../components/common/ReplyDialog";
-import ConfirmationDialog from "../components/common/ConfirmationDialog";
-import { useState, useEffect } from "react";
-import { Comment } from "../types";
+import { Comment, CommunityCategory } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import EmptyState from "../components/common/EmptyState";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const PostDetail = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+  const id = route.params?.id;
+
   const { getPostById, updatePost, refreshPosts, removePost, loadComments, toggleBookmark } = usePostsStore();
   const post = id ? getPostById(id) : undefined;
   const { user } = useAuth();
   const { showToast } = useToast();
 
-  // Ensure we have the latest post + comments when navigating directly to this page
-  useEffect(() => {
-    let isMounted = true;
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [loadedPostId, setLoadedPostId] = useState<string | null>(null);
+  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+  const [commentText, setCommentText] = useState("");
 
+  useEffect(() => {
     if (id && !post) {
       void refreshPosts();
     }
-
-    return () => {
-      isMounted = false;
-    };
   }, [id, post, refreshPosts]);
 
-  const [isLoadingComments, setIsLoadingComments] = useState(false);
-  const [loadedPostId, setLoadedPostId] = useState<string | null>(null);
-
   useEffect(() => {
-    let isMounted = true;
-
-    // Only load comments if we have a post, and we haven't loaded them for this ID yet
     if (id && post && loadedPostId !== id) {
       const fetchComments = async () => {
-        if (!isMounted) return;
         setIsLoadingComments(true);
         try {
           await loadComments(id);
-          if (isMounted) {
-            setLoadedPostId(id);
-          }
+          setLoadedPostId(id);
         } catch (error) {
           console.error("Failed to load comments:", error);
         } finally {
-          if (isMounted) {
-            setIsLoadingComments(false);
-          }
+          setIsLoadingComments(false);
         }
       };
       fetchComments();
     }
-
-    return () => {
-      isMounted = false;
-    };
   }, [id, post, loadedPostId, loadComments]);
-
-  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
-  const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
-  const [commentText, setCommentText] = useState("");
-  const [replyText, setReplyText] = useState("");
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-background pb-20 flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardContent className="pt-6">
-            <p className="text-center text-muted-foreground">Post not found</p>
-            <Button
-              variant="outline"
-              className="w-full mt-4"
-              onClick={() => navigate("/community")}
-            >
-              Back to Community
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator color="#ec4899" size="large" />
+      </SafeAreaView>
     );
   }
 
@@ -105,8 +73,6 @@ const PostDetail = () => {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -131,7 +97,6 @@ const PostDetail = () => {
       }
     });
 
-    // Persist vote to backend; rollback on failure
     try {
       if (voteType === "up") {
         await postsAPI.upvote(String(post.id));
@@ -139,14 +104,12 @@ const PostDetail = () => {
         await postsAPI.downvote(String(post.id));
       }
     } catch (error: any) {
-      console.error("Error updating vote:", error);
-      // Roll back optimistic update
       updatePost(post.id, (currentPost) => ({
         ...currentPost,
         votes: previousVotes,
         userVote: previousVote ?? null,
       }));
-      alert(error.message || "Failed to update vote. Please try again.");
+      showToast("Failed to update vote", "error");
     }
   };
 
@@ -154,304 +117,218 @@ const PostDetail = () => {
     try {
       await toggleBookmark(post.id);
     } catch (error: any) {
-      showToast(error.message || "Failed to update bookmark", "error");
+      showToast("Failed to update bookmark", "error");
     }
   };
 
   const handleAddComment = async () => {
     if (!commentText.trim() || !id) return;
-
     try {
-      await commentsAPI.create(id, {
-        content: commentText,
-      });
-
-      await refreshPosts();
+      await commentsAPI.create(id, { content: commentText });
+      await loadComments(id);
       setCommentText("");
       setIsCommentDialogOpen(false);
       showToast("Comment added", "success");
     } catch (error: any) {
-      console.error("Error adding comment:", error);
-      showToast(error.message || "Failed to add comment. Please try again.", "error");
+      showToast("Failed to add comment", "error");
     }
   };
 
-  const handleReply = async (commentId: string | number, replyContent: string) => {
-    if (!id) return;
-
-    try {
-      await commentsAPI.create(id, {
-        content: replyContent,
-        parentCommentId: Number(commentId),
-      });
-
-      await refreshPosts();
-      setReplyText("");
-      setIsReplyDialogOpen(false);
-      setSelectedCommentId(null);
-      showToast("Reply added", "success");
-    } catch (error: any) {
-      console.error("Error adding reply:", error);
-      showToast(error.message || "Failed to add reply. Please try again.", "error");
-    }
-  };
-
-  const openReplyDialog = (commentId: string) => {
-    setSelectedCommentId(commentId);
-    setIsReplyDialogOpen(true);
-  };
-
-  const handleDeleteClick = () => {
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!id) return;
-
-    try {
-      await postsAPI.delete(id);
-      removePost(post.id);
-      navigate("/community");
-      showToast("Post deleted", "success");
-    } catch (error: any) {
-      console.error("Error deleting post:", error);
-      showToast(error.message || "Failed to delete post. Please try again.", "error");
-    } finally {
-      setIsDeleteDialogOpen(false);
-    }
+  const handleDeletePost = () => {
+    Alert.alert(
+      "Delete Post",
+      "Are you sure you want to delete this post?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await postsAPI.delete(id);
+              removePost(post.id);
+              navigation.goBack();
+              showToast("Post deleted", "success");
+            } catch (error) {
+              showToast("Failed to delete post", "error");
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
-    <div className="pb-20">
-      <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/community")}
-          className="mb-4"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Community
-        </Button>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <View style={styles.header}>
+        <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+          <ArrowLeft size={24} color="#0f172a" />
+        </Pressable>
+        <Text style={styles.headerTitle}>Post Details</Text>
+      </View>
 
-        <Card className="mb-6 border border-border/60 shadow-sm bg-card/95 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <Card style={styles.postCard}>
           <CardHeader>
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <CardTitle className="text-base">{post.title}</CardTitle>
-
-                </div>
-                <CardDescription className="text-[10px] mb-[4px]">
+            <View style={styles.postHeaderRow}>
+              <View style={styles.postHeaderText}>
+                <CardTitle style={styles.postTitle}>{post.title}</CardTitle>
+                <Text style={styles.postMeta}>
                   by {post.author} • {formatDate(post.createdAt)}
-                  {post.updatedAt ? ` • Updated` : ''}
-                </CardDescription>
-                <div className="flex gap-2">
+                </Text>
+                <View style={styles.badgeRow}>
                   {post.flair && <Badge variant="secondary">{post.flair}</Badge>}
-                  <Badge variant="outline">{post.category}</Badge></div>
-              </div>
+                  <Badge variant="outline">{post.category}</Badge>
+                </View>
+              </View>
               {isAuthor && (
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleDeleteClick}
-                    aria-label="Delete post"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+                <Pressable onPress={handleDeletePost} style={styles.deleteButton}>
+                  <Trash2 size={20} color="#ef4444" />
+                </Pressable>
               )}
-            </div>
+            </View>
           </CardHeader>
           <CardContent>
-            <p className="whitespace-pre-wrap mb-6 text-sm leading-relaxed">{post.content}</p>
-            <div className="flex items-center gap-4 flex-wrap border-t pt-4">
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 hover:bg-transparent"
-                  onClick={() => handleVote("up")}
-                  aria-label="Upvote"
-                >
+            <Text style={styles.postContent}>
+              {post.content}
+            </Text>
+
+            <View style={styles.postActions}>
+              <View style={styles.voteContainer}>
+                <Pressable onPress={() => handleVote("up")} style={styles.voteButton}>
                   <ArrowBigUp
-                    className={`h-5 w-5 ${post.userVote === "up" ? "text-primary fill-primary" : "text-muted-foreground hover:text-primary"
-                      }`}
+                    size={28}
+                    color={post.userVote === "up" ? "#ec4899" : "#64748b"}
+                    fill={post.userVote === "up" ? "#ec4899" : "transparent"}
                   />
-                </Button>
-                <span className={`font-bold min-w-[2rem] text-center text-lg ${post.userVote === "up" ? "text-primary" : post.userVote === "down" ? "text-blue-600" : ""}`}>
+                </Pressable>
+                <Text style={styles.voteCount}>
                   {post.votes}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 hover:bg-transparent"
-                  onClick={() => handleVote("down")}
-                  aria-label="Downvote"
-                >
+                </Text>
+                <Pressable onPress={() => handleVote("down")} style={styles.voteButton}>
                   <ArrowBigDown
-                    className={`h-5 w-5 ${post.userVote === "down" ? "text-blue-600 fill-blue-600" : "text-muted-foreground hover:text-blue-600"
-                      }`}
+                    size={28}
+                    color={post.userVote === "down" ? "#2563eb" : "#64748b"}
+                    fill={post.userVote === "down" ? "#2563eb" : "transparent"}
                   />
-                </Button>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsCommentDialogOpen(true)}
-              >
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Add Comment
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleBookmark}
-                aria-label={post.bookmarked ? "Unbookmark" : "Bookmark"}
-              >
+                </Pressable>
+              </View>
+
+              <Pressable onPress={() => setIsCommentDialogOpen(true)} style={styles.commentAction}>
+                <MessageSquare size={20} color="#64748b" style={styles.actionIcon} />
+                <Text style={styles.actionText}>Comment</Text>
+              </Pressable>
+
+              <Pressable onPress={handleBookmark} style={styles.bookmarkButton}>
                 {post.bookmarked ? (
-                  <BookmarkCheck className="h-4 w-4 text-primary fill-primary" />
+                  <BookmarkCheck size={20} color="#ec4899" fill="#ec4899" />
                 ) : (
-                  <Bookmark className="h-4 w-4" />
+                  <Bookmark size={20} color="#64748b" />
                 )}
-              </Button>
-            </div>
+              </Pressable>
+            </View>
           </CardContent>
         </Card>
 
-        <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300 delay-75">
-          <div className="flex items-center justify-between">
-            <h2 className="text font-semibold">
-              Comments ({post.comments.length})
-            </h2>
-          </div>
+        <View style={styles.commentsSection}>
+          <Text style={styles.sectionTitle}>
+            Comments ({post.comments?.length || 0})
+          </Text>
 
           {isLoadingComments ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : post.comments.length === 0 ? (
-            <EmptyState
-              title="No comments yet"
-              description="Be the first to share your thoughts!"
-            />
+            <ActivityIndicator color="#ec4899" style={styles.loadingIndicator} />
+          ) : !post.comments || post.comments.length === 0 ? (
+            <EmptyState title="No comments yet" description="Be the first to share your thoughts!" />
           ) : (
             post.comments.map((comment) => (
               <CommentItem
                 key={comment.id}
                 comment={comment}
                 formatDate={formatDate}
-                onReply={openReplyDialog}
+                postId={post.id}
+                onReplySuccess={() => loadComments(post.id)}
               />
             ))
           )}
-        </div>
+        </View>
+      </ScrollView>
 
-        <CommentDialog
-          open={isCommentDialogOpen}
-          onOpenChange={setIsCommentDialogOpen}
-          value={commentText}
-          onChange={setCommentText}
-          onSubmit={handleAddComment}
-        />
-
-        {selectedCommentId && (
-          <ReplyDialog
-            open={isReplyDialogOpen}
-            onOpenChange={setIsReplyDialogOpen}
-            replyingTo={post.comments.find((c) => c.id === selectedCommentId)?.author}
-            value={replyText}
-            onChange={setReplyText}
-            onSubmit={() => selectedCommentId && handleReply(selectedCommentId, replyText)}
-          />
-        )}
-
-        <ConfirmationDialog
-          open={isDeleteDialogOpen}
-          onOpenChange={setIsDeleteDialogOpen}
-          title="Delete Post"
-          description="Are you sure you want to delete this post? This action cannot be undone."
-          confirmLabel="Delete"
-          onConfirm={handleConfirmDelete}
-        />
-      </div>
-    </div>
+      <CommentDialog
+        open={isCommentDialogOpen}
+        onOpenChange={setIsCommentDialogOpen}
+        value={commentText}
+        onChange={setCommentText}
+        onSubmit={handleAddComment}
+      />
+    </SafeAreaView>
   );
 };
 
 const CommentItem = ({
   comment,
   formatDate,
-  onReply,
+  postId,
+  onReplySuccess
 }: {
   comment: Comment;
   formatDate: (date: Date | string) => string;
-  onReply: (commentId: string) => void;
+  postId: string | number;
+  onReplySuccess: () => void;
 }) => {
   const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
   const [replyText, setReplyText] = useState("");
-  const { refreshPosts } = usePostsStore();
+  const { showToast } = useToast();
 
   const handleReplySubmit = async () => {
     if (!replyText.trim()) return;
-
     try {
-      await commentsAPI.create(String(comment.postId), {
+      await commentsAPI.create(String(postId), {
         content: replyText,
         parentCommentId: Number(comment.id),
       });
-
-      // Refresh to get updated comments
-      await refreshPosts();
+      onReplySuccess();
       setReplyText("");
       setIsReplyDialogOpen(false);
+      showToast("Reply added", "success");
     } catch (error: any) {
-      console.error("Error adding reply:", error);
-      alert(error.message || "Failed to add reply. Please try again.");
+      showToast("Failed to add reply", "error");
     }
   };
 
   const totalReplies = comment.replies?.length || 0;
 
   return (
-    <>
-      <Card>
-        <CardContent className="pt-4">
-          <div className="bg-muted/50 rounded-lg p-4">
-            <div className="flex justify-between items-start mb-2">
-              <p className="text-sm font-semibold">{comment.author}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatDate(comment.createdAt)}
-              </p>
-            </div>
-            <p className="text-sm mb-3">{comment.content}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => setIsReplyDialogOpen(true)}
-            >
-              <MessageSquare className="mr-1 h-3 w-3" />
-              Reply {totalReplies > 0 && `(${totalReplies})`}
-            </Button>
-            {comment.replies && comment.replies.length > 0 && (
-              <div className="mt-4 ml-4 space-y-3 border-l-2 border-primary/20 pl-4">
-                {comment.replies.map((reply) => (
-                  <div key={reply.id} className="bg-background/70 rounded-md p-3">
-                    <div className="flex justify-between items-start mb-1">
-                      <p className="text-xs font-medium">{reply.author}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(reply.createdAt)}
-                      </p>
-                    </div>
-                    <p className="text-xs">{reply.content}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <View style={styles.commentItem}>
+      <View style={styles.commentHeader}>
+        <Text style={styles.commentAuthor}>{comment.author}</Text>
+        <Text style={styles.commentDate}>{formatDate(comment.createdAt)}</Text>
+      </View>
+      <Text style={styles.commentContent}>{comment.content}</Text>
+
+      <Pressable
+        onPress={() => setIsReplyDialogOpen(true)}
+        style={styles.replyButton}
+      >
+        <MessageSquare size={14} color="#64748b" style={styles.replyIcon} />
+        <Text style={styles.replyText}>
+          Reply {totalReplies > 0 ? `(${totalReplies})` : ''}
+        </Text>
+      </Pressable>
+
+      {comment.replies && comment.replies.length > 0 && (
+        <View style={styles.repliesContainer}>
+          {comment.replies.map((reply) => (
+            <View key={reply.id} style={styles.replyItem}>
+              <View style={styles.commentHeader}>
+                <Text style={styles.commentAuthorSmall}>{reply.author}</Text>
+                <Text style={styles.commentDateSmall}>{formatDate(reply.createdAt)}</Text>
+              </View>
+              <Text style={styles.commentContentSmall}>{reply.content}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       <ReplyDialog
         open={isReplyDialogOpen}
         onOpenChange={setIsReplyDialogOpen}
@@ -460,9 +337,193 @@ const CommentItem = ({
         onChange={setReplyText}
         onSubmit={handleReplySubmit}
       />
-    </>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent', // background
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+    color: '#0f172a',
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  postCard: {
+    marginBottom: 24,
+  },
+  postHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  postHeaderText: {
+    flex: 1,
+  },
+  postTitle: {
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  postMeta: {
+    fontSize: 12,
+    color: '#64748b', // muted-foreground
+    marginBottom: 8,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  postContent: {
+    fontSize: 14,
+    color: '#0f172a',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  postActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0', // border
+    paddingTop: 12,
+  },
+  voteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  voteButton: {
+    padding: 8,
+  },
+  voteCount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    minWidth: 20,
+    textAlign: 'center',
+    color: '#0f172a',
+  },
+  commentAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 8,
+  },
+  actionIcon: {
+    marginRight: 0,
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0f172a',
+  },
+  bookmarkButton: {
+    padding: 8,
+  },
+  commentsSection: {
+    marginBottom: 40,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  loadingIndicator: {
+    paddingVertical: 40,
+  },
+  commentItem: {
+    backgroundColor: '#ffffff', // card
+    borderWidth: 1,
+    borderColor: '#e2e8f0', // border
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  commentAuthor: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  commentDate: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  commentContent: {
+    fontSize: 14,
+    color: '#0f172a',
+    marginBottom: 12,
+  },
+  replyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  replyIcon: {
+    marginRight: 0,
+  },
+  replyText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  repliesContainer: {
+    marginTop: 16,
+    marginLeft: 16,
+    paddingLeft: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: 'rgba(255, 107, 107, 0.2)', // primary/20
+    gap: 12,
+  },
+  replyItem: {
+    backgroundColor: '#f1f5f9', // muted
+    padding: 12,
+    borderRadius: 8,
+  },
+  commentAuthorSmall: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  commentDateSmall: {
+    fontSize: 10,
+    color: '#64748b',
+  },
+  commentContentSmall: {
+    fontSize: 12,
+    color: '#0f172a',
+  },
+});
 
 export default PostDetail;
 

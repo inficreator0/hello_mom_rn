@@ -1,37 +1,83 @@
 import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { View, Text, StyleSheet, ViewStyle, TextStyle } from "react-native"
 
-import { cn } from "../../lib/utils"
+export interface BadgeProps {
+  variant?: 'default' | 'secondary' | 'destructive' | 'outline';
+  children?: React.ReactNode;
+  style?: ViewStyle | ViewStyle[];
+  textStyle?: TextStyle | TextStyle[];
+}
 
-const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-  {
-    variants: {
-      variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
-        outline: "text-foreground",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
-
-export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
-
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ style, textStyle, variant = 'default', children, ...props }: BadgeProps) {
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <View
+      style={[
+        styles.badge,
+        styles[`variant_${variant}` as keyof typeof styles],
+        style,
+      ]}
+      {...props}
+    >
+      {typeof children === 'string' ? (
+        <Text style={[
+          textStyles.text,
+          textStyles[`textVariant_${variant}` as keyof typeof textStyles],
+          textStyle
+        ]}>
+          {children}
+        </Text>
+      ) : (
+        children
+      )}
+    </View>
   )
 }
 
-export { Badge, badgeVariants }
+const styles = StyleSheet.create({
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 9999,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
+  variant_default: {
+    borderColor: 'transparent',
+    backgroundColor: '#ec4899',
+  },
+  variant_secondary: {
+    borderColor: 'transparent',
+    backgroundColor: '#f1f5f9',
+  },
+  variant_destructive: {
+    borderColor: 'transparent',
+    backgroundColor: '#ef4444',
+  },
+  variant_outline: {
+    borderColor: '#e2e8f0',
+    backgroundColor: 'transparent',
+  },
+})
+
+const textStyles = StyleSheet.create({
+  text: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  textVariant_default: {
+    color: '#ffffff',
+  },
+  textVariant_secondary: {
+    color: '#0f172a',
+  },
+  textVariant_destructive: {
+    color: '#ffffff',
+  },
+  textVariant_outline: {
+    color: '#0f172a',
+  },
+})
+
+export { Badge }
 

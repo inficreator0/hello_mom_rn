@@ -1,4 +1,5 @@
-import { Loader2 } from "lucide-react";
+import * as React from "react";
+import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 
 interface LoaderProps {
   label?: string;
@@ -7,22 +8,42 @@ interface LoaderProps {
 
 const Loader = ({ label = "Loading...", fullScreen = false }: LoaderProps) => {
   const content = (
-    <div className="flex flex-col items-center justify-center gap-3 py-6">
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      <p className="text-sm text-muted-foreground">{label}</p>
-    </div>
+    <View style={styles.loaderContent}>
+      <ActivityIndicator size="large" color="#ec4899" />
+      <Text style={styles.label}>{label}</Text>
+    </View>
   );
 
   if (fullScreen) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <View style={styles.fullScreenContainer}>
         {content}
-      </div>
+      </View>
     );
   }
 
   return content;
 };
+
+const styles = StyleSheet.create({
+  loaderContent: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  label: {
+    fontSize: 14,
+    color: '#64748b', // muted-foreground
+    marginTop: 12,
+  },
+  fullScreenContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff', // background
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 export default Loader;
 

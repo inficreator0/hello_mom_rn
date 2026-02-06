@@ -38,11 +38,11 @@ export interface Post {
 export interface PostFormData {
   title: string;
   content: string;
-  category: string;
-  flair?: string;
+  category: string[];
+  flair: string[];
 }
 
-export type CommunityCategory = 
+export type CommunityCategory =
   | "All"
   | "Pregnancy"
   | "Postpartum"

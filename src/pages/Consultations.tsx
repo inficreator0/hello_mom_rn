@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
+import { View, Text, ScrollView, Pressable, Linking, Alert, StyleSheet } from "react-native";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Phone, Calendar, Stethoscope, Sparkles } from "lucide-react";
+import { Phone, Calendar, Stethoscope, Sparkles } from "lucide-react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { SvgUri } from "react-native-svg";
 
 interface Doctor {
   id: number;
@@ -56,96 +59,161 @@ export const Consultations = () => {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
 
   useEffect(() => {
-    // Replace with API later
     setDoctors(mockDoctors);
   }, []);
 
   const handleCall = (phone: string) => {
-    window.location.href = `tel:${phone}`;
+    Linking.openURL(`tel:${phone}`);
   };
 
   const handleAppointment = (doctor: Doctor) => {
-    alert(`Booking appointment with ${doctor.name}...`);
+    Alert.alert("Appointment", `Booking appointment with ${doctor.name}...`);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background pb-20">
-      <div className="container max-w-5xl px-4 py-8">
-        <div className="flex items-center justify-between mb-6 animate-in fade-in-0 slide-in-from-top-2 duration-300">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground mb-1">
-              Consult a Doctor
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Book appointments or talk to trusted experts instantly.
-            </p>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span>Trusted, curated experts</span>
-          </div>
-        </div>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Consult Experts</Text>
+            <Text style={styles.subtitle}>Talk to trusted doctors instantly.</Text>
+          </View>
+          <View style={styles.sparkleIconWrapper}>
+            <Sparkles size={18} color="#ec4899" />
+          </View>
+        </View>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300 delay-75">
-        {doctors.map((doctor) => (
-          <Card
-            key={doctor.id}
-            className="bg-card text-card-foreground shadow-sm rounded-lg border border-border/50 hover:shadow-lg hover:-translate-y-1 transition"
-          >
-            <CardContent className="pt-6">
-              {/* Avatar */}
-              
-              <div className="flex justify-center mb-4">
-                <img
-                  src={doctor.avatar}
-                  alt={doctor.name}
-                  className="w-20 h-20 rounded-full object-cover shadow"
-                />
-              </div>
+        <View style={styles.doctorList}>
+          {doctors.map((doctor) => (
+            <Card key={doctor.id}>
+              <CardContent style={styles.cardContent}>
+                <View style={styles.doctorHeader}>
+                  <View style={styles.avatarContainer}>
+                    <SvgUri
+                      width="100%"
+                      height="100%"
+                      uri={doctor.avatar}
+                    />
+                  </View>
+                  <Text style={styles.doctorName}>{doctor.name}</Text>
+                  <Text style={styles.doctorSpec}>{doctor.specialization}</Text>
+                </View>
 
-              {/* Name */}
-              <h2 className="text-lg font-semibold text-center">
-                {doctor.name}
-              </h2>
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Stethoscope size={14} color="#64748b" style={styles.statIcon} />
+                    <Text style={styles.statText}>{doctor.experience} yrs exp.</Text>
+                  </View>
+                  <Text style={styles.statText}>{doctor.consultations} consults</Text>
+                </View>
 
-              <p className="text-center text-muted-foreground text-sm">
-                {doctor.specialization}
-              </p>
-
-              {/* Experience + Consultations */}
-              <div className="mt-4 flex justify-between text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Stethoscope className="w-4 h-4" />
-                  {doctor.experience} yrs exp.
-                </span>
-                <span>{doctor.consultations} consults</span>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex justify-center mt-6 flex-row gap-3">
-                <Button
-                  className="flex w-full"
-                  onClick={() => handleCall(doctor.phone)}
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Call Now
-                </Button>
-
-                <Button
-                  className="flex w-full"
-                  variant="secondary"
-                  onClick={() => handleAppointment(doctor)}
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Consult
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        </div>
-      </div>
-    </div>
+                <View style={styles.actionsRow}>
+                  <Button style={styles.actionButton} onPress={() => handleCall(doctor.phone)}>
+                    <Phone size={16} color="white" style={styles.buttonIcon} />
+                    <Text>Call</Text>
+                  </Button>
+                  <Button variant="secondary" style={styles.actionButton} onPress={() => handleAppointment(doctor)}>
+                    <Calendar size={16} color="#ec4899" style={styles.buttonIcon} />
+                    <Text>Book</Text>
+                  </Button>
+                </View>
+              </CardContent>
+            </Card>
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent', // background
+  },
+  scrollView: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#0f172a', // foreground
+    marginBottom: 4,
+  },
+  subtitle: {
+    color: '#64748b', // muted-foreground
+    fontSize: 14,
+  },
+  sparkleIconWrapper: {
+    backgroundColor: 'rgba(255, 107, 107, 0.1)', // primary/10
+    padding: 8,
+    borderRadius: 9999,
+  },
+  doctorList: {
+    gap: 24,
+    paddingBottom: 40,
+  },
+  cardContent: {
+    paddingTop: 24,
+  },
+  doctorHeader: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatarContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: '#f1f5f9', // muted
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 107, 107, 0.1)',
+  },
+  doctorName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 16,
+    color: '#0f172a',
+  },
+  doctorSpec: {
+    fontSize: 14,
+    color: '#64748b',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  statItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statIcon: {
+    marginRight: 4,
+  },
+  statText: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    height: 48,
+  },
+  buttonIcon: {
+    marginRight: 8,
+  },
+});
 

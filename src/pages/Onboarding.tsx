@@ -1,23 +1,22 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Baby, Users, ArrowRight } from "lucide-react";
+import { Baby, Users, ArrowRight } from "lucide-react-native";
 import { usePreferences } from "../context/PreferencesContext";
-import Loader from "../components/common/Loader";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export const Onboarding = () => {
   const { mode, setMode, completeOnboarding, updatePreferences } = usePreferences();
   const [step, setStep] = useState<1 | 2>(1);
-  const [selectedPurpose, setSelectedPurpose] = useState<"baby" | "community" | null>(
-    mode
-  );
+  const [selectedPurpose, setSelectedPurpose] = useState<"baby" | "community" | null>(mode);
   const [babyName, setBabyName] = useState("");
   const [babyStage, setBabyStage] = useState("newborn");
   const [firstTimeMom, setFirstTimeMom] = useState<"yes" | "no" | null>(null);
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
 
   const handleNextFromPurpose = () => {
     if (!selectedPurpose) return;
@@ -32,7 +31,6 @@ export const Onboarding = () => {
   const handleFinish = async () => {
     setSaving(true);
     try {
-      // Save baby-related preferences for later use in profile/trackers
       updatePreferences({
         babyName: babyName || undefined,
         babyStage,
@@ -40,194 +38,299 @@ export const Onboarding = () => {
         focusAreas,
       });
       completeOnboarding();
-      navigate("/", { replace: true });
+      // App.tsx handles navigation based on onboardingCompleted
     } finally {
       setSaving(false);
     }
   };
 
   if (saving) {
-    return <Loader fullScreen label="Setting up your experience..." />;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator color="#ec4899" size="large" />
+        <Text style={styles.loadingText}>Setting up your experience...</Text>
+      </View>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background flex items-center justify-center px-4 pb-20">
-      <Card className="w-full max-w-xl shadow-lg border border-border/60 bg-card/95 animate-in fade-in-0 zoom-in-95 duration-300">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl">Welcome to Hello Mom</CardTitle>
-          <CardDescription>
-            Let&apos;s personalize your experience in just a few steps.
-          </CardDescription>
-        </CardHeader>
-        <CardContent key={step} className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
-          {step === 1 && (
-            <>
-              <p className="text-sm text-muted-foreground">
-                How do you plan to use Hello Mom?
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  className={`border rounded-lg p-4 text-left flex flex-col gap-2 hover:border-primary transition ${
-                    selectedPurpose === "baby"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-background"
-                  }`}
-                  onClick={() => setSelectedPurpose("baby")}
-                >
-                  <Baby className="h-6 w-6 text-primary" />
-                  <div>
-                    <p className="font-semibold text-sm">For my baby</p>
-                    <p className="text-xs text-muted-foreground">
-                      Track feeding, sleep, growth and get baby-specific insights.
-                    </p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className={`border rounded-lg p-4 text-left flex flex-col gap-2 hover:border-primary transition ${
-                    selectedPurpose === "community"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-background"
-                  }`}
-                  onClick={() => setSelectedPurpose("community")}
-                >
-                  <Users className="h-6 w-6 text-primary" />
-                  <div>
-                    <p className="font-semibold text-sm">Community & basics</p>
-                    <p className="text-xs text-muted-foreground">
-                      Join the community and use basic wellness trackers.
-                    </p>
-                  </div>
-                </button>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Step 1 of 2</span>
-                <span>You can change this later from your profile</span>
-              </div>
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleNextFromPurpose}
-                  disabled={!selectedPurpose}
-                >
-                  Continue
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </>
-          )}
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.flex1}
+      >
+        <ScrollView
+          style={styles.flex1}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Card style={styles.card}>
+            <CardHeader>
+              <CardTitle style={styles.cardTitle}>Welcome to Hello Mom</CardTitle>
+              <CardDescription>
+                Let's personalize your experience in a few steps.
+              </CardDescription>
+            </CardHeader>
+            <CardContent style={styles.cardContent}>
+              {step === 1 && (
+                <View style={styles.stepContainer}>
+                  <Text style={styles.stepLabel}>How do you plan to use Hello Mom?</Text>
 
-          {step === 2 && (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Tell us a bit about your baby so we can highlight the most relevant
-                tools. You can change this later from your profile.
-              </p>
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium" htmlFor="babyName">
-                    Baby&apos;s name (optional)
-                  </label>
-                  <input
-                    id="babyName"
-                    type="text"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    placeholder="e.g., Aanya"
-                    value={babyName}
-                    onChange={(e) => setBabyName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium" htmlFor="babyStage">
-                    Baby stage
-                  </label>
-                  <select
-                    id="babyStage"
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                    value={babyStage}
-                    onChange={(e) => setBabyStage(e.target.value)}
+                  <Pressable
+                    onPress={() => setSelectedPurpose("baby")}
+                    style={[
+                      styles.purposeOption,
+                      selectedPurpose === "baby" ? styles.purposeOptionSelected : styles.purposeOptionUnselected
+                    ]}
                   >
-                    <option value="newborn">0-3 months</option>
-                    <option value="infant">3-12 months</option>
-                    <option value="toddler">1-3 years</option>
-                    <option value="pregnant">I&apos;m currently pregnant</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-medium">Is this your first baby?</p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={firstTimeMom === "yes" ? "default" : "outline"}
-                      onClick={() => setFirstTimeMom("yes")}
-                    >
-                      Yes
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={firstTimeMom === "no" ? "default" : "outline"}
-                      onClick={() => setFirstTimeMom("no")}
-                    >
-                      No
-                    </Button>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-medium">
-                    What would you like to focus on right now?
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {["Feeding", "Sleep", "Growth", "Mental health", "Community support"].map(
-                      (area) => {
-                        const selected = focusAreas.includes(area);
-                        return (
-                          <button
-                            key={area}
-                            type="button"
-                            onClick={() =>
-                              setFocusAreas((prev) =>
-                                selected
-                                  ? prev.filter((a) => a !== area)
-                                  : [...prev, area]
-                              )
-                            }
-                            className={`px-3 py-1 rounded-full text-xs border transition ${
-                              selected
-                                ? "bg-primary text-primary-foreground border-primary"
-                                : "bg-background text-muted-foreground border-border hover:border-primary"
-                            }`}
-                          >
-                            {area}
-                          </button>
-                        );
-                      }
-                    )}
-                  </div>
-                </div>
-              </div>
+                    <View style={styles.iconWrapper}>
+                      <Baby size={24} color="#ec4899" />
+                    </View>
+                    <View style={styles.flex1}>
+                      <Text style={styles.optionTitle}>For my baby</Text>
+                      <Text style={styles.optionDescription}>Feeding, sleep, and growth tracking.</Text>
+                    </View>
+                  </Pressable>
 
-              <div className="flex justify-between pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setStep(1)}
-                >
-                  Back
-                </Button>
-                <Button onClick={handleFinish}>
-                  Finish setup
-                </Button>
-              </div>
-              <p className="mt-2 text-[11px] text-muted-foreground text-right">
-                Step 2 of 2
-              </p>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                  <Pressable
+                    onPress={() => setSelectedPurpose("community")}
+                    style={[
+                      styles.purposeOption,
+                      selectedPurpose === "community" ? styles.purposeOptionSelected : styles.purposeOptionUnselected
+                    ]}
+                  >
+                    <View style={styles.iconWrapper}>
+                      <Users size={24} color="#ec4899" />
+                    </View>
+                    <View style={styles.flex1}>
+                      <Text style={styles.optionTitle}>Community only</Text>
+                      <Text style={styles.optionDescription}>Join discussions and get support.</Text>
+                    </View>
+                  </Pressable>
+
+                  <View style={styles.footerRow}>
+                    <Text style={styles.stepCounter}>Step 1 of 2</Text>
+                    <Button
+                      onPress={handleNextFromPurpose}
+                      disabled={!selectedPurpose}
+                      style={styles.nextButton}
+                    >
+                      Continue
+                      <ArrowRight size={16} color="white" style={styles.buttonIcon} />
+                    </Button>
+                  </View>
+                </View>
+              )}
+
+              {step === 2 && (
+                <View style={styles.stepContainer}>
+                  <Text style={styles.stepLabel}>Tell us about your baby to help us personalize your feed.</Text>
+
+                  <View>
+                    <Text style={styles.inputLabel}>Baby's Name (Optional)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="e.g. Aanya"
+                      value={babyName}
+                      onChangeText={setBabyName}
+                    />
+                  </View>
+
+                  <View>
+                    <Text style={styles.inputLabel}>Baby Stage</Text>
+                    <View style={styles.stageGrid}>
+                      {["newborn", "infant", "toddler", "pregnant"].map((stage) => (
+                        <Pressable
+                          key={stage}
+                          onPress={() => setBabyStage(stage)}
+                          style={[
+                            styles.stageChip,
+                            babyStage === stage ? styles.stageChipSelected : styles.stageChipUnselected
+                          ]}
+                        >
+                          <Text style={[
+                            styles.stageText,
+                            babyStage === stage ? styles.stageTextSelected : styles.stageTextUnselected
+                          ]}>
+                            {stage === "newborn" ? "0-3m" : stage === "infant" ? "3-12m" : stage === "toddler" ? "1-3y" : "Pregnant"}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View>
+                    <Text style={styles.inputLabel}>Is this your first baby?</Text>
+                    <View style={styles.buttonRow}>
+                      <Button
+                        style={styles.flex1}
+                        variant={firstTimeMom === "yes" ? "default" : "outline"}
+                        onPress={() => setFirstTimeMom("yes")}
+                      >
+                        Yes
+                      </Button>
+                      <Button
+                        style={styles.flex1}
+                        variant={firstTimeMom === "no" ? "default" : "outline"}
+                        onPress={() => setFirstTimeMom("no")}
+                      >
+                        No
+                      </Button>
+                    </View>
+                  </View>
+
+                  <View style={styles.footerRow}>
+                    <Button variant="outline" onPress={() => setStep(1)}>
+                      Back
+                    </Button>
+                    <Button onPress={handleFinish} style={styles.nextButton}>
+                      Finish
+                    </Button>
+                  </View>
+                </View>
+              )}
+            </CardContent>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent', // background
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: 'transparent', // background
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#64748b', // muted-foreground
+  },
+  flex1: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  card: {
+    width: '100%',
+  },
+  cardTitle: {
+    fontSize: 24,
+  },
+  cardContent: {
+    gap: 24,
+  },
+  stepContainer: {
+    gap: 16,
+  },
+  stepLabel: {
+    fontSize: 14,
+    color: '#64748b', // muted-foreground
+  },
+  purposeOption: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  purposeOptionSelected: {
+    backgroundColor: 'rgba(255, 107, 107, 0.05)', // primary/5
+    borderColor: '#ec4899',
+  },
+  purposeOptionUnselected: {
+    backgroundColor: '#ffffff', // card
+    borderColor: '#e2e8f0', // border
+  },
+  iconWrapper: {
+    backgroundColor: 'rgba(255, 107, 107, 0.1)', // primary/10
+    padding: 8,
+    borderRadius: 8,
+  },
+  optionTitle: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#0f172a',
+  },
+  optionDescription: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  stepCounter: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  nextButton: {
+    paddingHorizontal: 24,
+  },
+  buttonIcon: {
+    marginLeft: 8,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 6,
+    marginLeft: 4,
+    color: '#0f172a',
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#e2e8f0', // border
+    backgroundColor: '#ffffff', // background
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    color: '#0f172a',
+  },
+  stageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  stageChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    borderWidth: 1,
+  },
+  stageChipSelected: {
+    backgroundColor: '#ec4899', // primary
+    borderColor: '#ec4899',
+  },
+  stageChipUnselected: {
+    backgroundColor: '#ffffff', // card
+    borderColor: '#e2e8f0', // border
+  },
+  stageText: {
+    fontSize: 12,
+  },
+  stageTextSelected: {
+    color: '#ffffff',
+  },
+  stageTextUnselected: {
+    color: '#0f172a', // foreground
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+});
 
 

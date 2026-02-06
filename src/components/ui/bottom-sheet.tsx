@@ -1,106 +1,149 @@
 import * as React from "react"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
-import { cn } from "../../lib/utils"
+import { View, Text, Pressable, Modal, StyleSheet, ViewStyle, TextStyle } from "react-native"
+import { X } from "lucide-react-native"
 
-const Sheet = DialogPrimitive.Root
-const SheetTrigger = DialogPrimitive.Trigger
-const SheetClose = DialogPrimitive.Close
-const SheetPortal = DialogPrimitive.Portal
+const SheetContext = React.createContext<{
+    open: boolean
+    onOpenChange: (open: boolean) => void
+}>({ open: false, onOpenChange: () => { } })
 
-const SheetOverlay = React.forwardRef<
-    React.ElementRef<typeof DialogPrimitive.Overlay>,
-    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-    <DialogPrimitive.Overlay
-        className={cn(
-            "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-            className
-        )}
-        {...props}
-        ref={ref}
-    />
-))
-SheetOverlay.displayName = DialogPrimitive.Overlay.displayName
-
-const SheetContent = React.forwardRef<
-    React.ElementRef<typeof DialogPrimitive.Content>,
-    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-    <SheetPortal>
-        <SheetOverlay />
-        <DialogPrimitive.Content
-            ref={ref}
-            className={cn(
-                "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out duration-300",
-                // Bottom sheet styles
-                "inset-x-0 bottom-0 border-t rounded-t-xl data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-                className
-            )}
-            {...props}
-        >
-            <div className="mx-auto mt-[-12px] mb-4 h-1.5 w-12 rounded-full bg-muted" />
+const Sheet = ({ open, onOpenChange, children }: { open: boolean, onOpenChange: (open: boolean) => void, children: React.ReactNode }) => {
+    return (
+        <SheetContext.Provider value={{ open, onOpenChange }}>
             {children}
-            <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-            </DialogPrimitive.Close>
-        </DialogPrimitive.Content>
-    </SheetPortal>
-))
-SheetContent.displayName = DialogPrimitive.Content.displayName
+        </SheetContext.Provider>
+    )
+}
 
-const SheetHeader = ({
-    className,
-    ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-    <div
-        className={cn(
-            "flex flex-col space-y-2 text-center sm:text-left",
-            className
-        )}
-        {...props}
-    />
+const SheetTrigger = ({ children, asChild }: { children: React.ReactNode, asChild?: boolean }) => {
+    const { onOpenChange } = React.useContext(SheetContext)
+    return (
+        <Pressable onPress={() => onOpenChange(true)}>
+            {children}
+        </Pressable>
+    )
+}
+
+const SheetClose = ({ children, asChild }: { children: React.ReactNode, asChild?: boolean }) => {
+    const { onOpenChange } = React.useContext(SheetContext)
+    return (
+        <Pressable onPress={() => onOpenChange(false)}>
+            {children}
+        </Pressable>
+    )
+}
+
+const SheetPortal = ({ children }: { children: React.ReactNode }) => <>{children}</>
+
+const SheetOverlay = ({ style }: { style?: ViewStyle | ViewStyle[] }) => {
+    const { onOpenChange } = React.useContext(SheetContext)
+    return (
+        <Pressable
+            style={[styles.overlay, style]}
+            onPress={() => onOpenChange(false)}
+        />
+    )
+}
+
+const SheetContent = ({ style, children, ...props }: { style?: ViewStyle | ViewStyle[], children: React.ReactNode }) => {
+    const { open, onOpenChange } = React.useContext(SheetContext)
+
+    return (
+        <Modal
+            visible={open}
+            transparent
+            animationType="slide"
+            onRequestClose={() => onOpenChange(false)}
+        >
+            <View style={styles.container}>
+                <SheetOverlay />
+                <View style={[styles.content, style]} {...props}>
+                    <View style={styles.handle} />
+                    {children}
+                    <Pressable
+                        onPress={() => onOpenChange(false)}
+                        style={styles.closeButton}
+                    >
+                        <X size={16} color="#64748b" />
+                    </Pressable>
+                </View>
+            </View>
+        </Modal>
+    )
+}
+
+const SheetHeader = ({ style, ...props }: any) => (
+    <View style={[styles.header, style]} {...props} />
 )
-SheetHeader.displayName = "SheetHeader"
 
-const SheetFooter = ({
-    className,
-    ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-    <div
-        className={cn(
-            "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
-            className
-        )}
-        {...props}
-    />
+const SheetFooter = ({ style, ...props }: any) => (
+    <View style={[styles.footer, style]} {...props} />
 )
-SheetFooter.displayName = "SheetFooter"
 
-const SheetTitle = React.forwardRef<
-    React.ElementRef<typeof DialogPrimitive.Title>,
-    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
-    <DialogPrimitive.Title
-        ref={ref}
-        className={cn("text-lg font-semibold text-foreground", className)}
-        {...props}
-    />
-))
-SheetTitle.displayName = DialogPrimitive.Title.displayName
+const SheetTitle = ({ style, ...props }: any) => (
+    <Text style={[styles.title, style]} {...props} />
+)
 
-const SheetDescription = React.forwardRef<
-    React.ElementRef<typeof DialogPrimitive.Description>,
-    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
->(({ className, ...props }, ref) => (
-    <DialogPrimitive.Description
-        ref={ref}
-        className={cn("text-sm text-muted-foreground", className)}
-        {...props}
-    />
-))
-SheetDescription.displayName = DialogPrimitive.Description.displayName
+const SheetDescription = ({ style, ...props }: any) => (
+    <Text style={[styles.description, style]} {...props} />
+)
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        justifyContent: 'flex-end',
+    },
+    overlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+    },
+    content: {
+        backgroundColor: '#ffffff', // background
+        padding: 24,
+        borderTopLeftRadius: 12,
+        borderTopRightRadius: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 10,
+        minHeight: 200,
+    },
+    handle: {
+        alignSelf: 'center',
+        width: 48,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#f1f5f9', // muted
+        marginTop: -12,
+        marginBottom: 16,
+    },
+    header: {
+        flexDirection: 'column',
+        gap: 8,
+        marginBottom: 16,
+    },
+    footer: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        gap: 8,
+        marginTop: 16,
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#0f172a', // foreground
+    },
+    description: {
+        fontSize: 14,
+        color: '#64748b', // muted-foreground
+    },
+    closeButton: {
+        position: 'absolute',
+        right: 16,
+        top: 16,
+    }
+})
 
 export {
     Sheet,

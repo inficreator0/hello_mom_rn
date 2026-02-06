@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User } from "../types";
 import { authAPI } from "../lib/api/auth";
 import { clearAuthStorage } from "../lib/http";
@@ -38,25 +39,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Check for existing session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    const storedToken = localStorage.getItem("token");
-    
-    if (storedUser && storedToken) {
+    const checkUser = async () => {
       try {
-        setUser(JSON.parse(storedUser));
+        const storedUser = await AsyncStorage.getItem("user");
+        const storedToken = await AsyncStorage.getItem("token");
+
+        if (storedUser && storedToken) {
+          setUser(JSON.parse(storedUser));
+        }
       } catch (error) {
         console.error("Error parsing stored user:", error);
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
+        await AsyncStorage.removeItem("user");
+        await AsyncStorage.removeItem("token");
+      } finally {
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    };
+    checkUser();
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
       const response = await authAPI.login(username, password);
-      
+
       const newUser: User = {
         id: response.userId,
         userId: response.userId,
@@ -64,9 +69,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         username: response.username,
         name: response.username,
       };
-      
+
       setUser(newUser);
-      localStorage.setItem("user", JSON.stringify(newUser));
+      await AsyncStorage.setItem("user", JSON.stringify(newUser));
       return true;
     } catch (error: any) {
       console.error("Login error:", error);
@@ -83,7 +88,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }): Promise<boolean> => {
     try {
       const response = await authAPI.register(data);
-      
+
       const newUser: User = {
         id: response.userId,
         userId: response.userId,
@@ -91,9 +96,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         username: response.username,
         name: response.username,
       };
-      
+
       setUser(newUser);
-      localStorage.setItem("user", JSON.stringify(newUser));
+      await AsyncStorage.setItem("user", JSON.stringify(newUser));
       return true;
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -101,9 +106,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
     clearAuthStorage();
+    await AsyncStorage.removeItem("user");
+    await AsyncStorage.removeItem("token");
   };
 
   return (

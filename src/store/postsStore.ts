@@ -96,8 +96,8 @@ export const usePostsStore = create<PostsState>((set, get) => ({
     try {
       set({
         isLoading: true,
-        // Only clear posts if specifically requested or if filters changed
-        posts: forceRefresh || effectiveCategory !== currentCategory || effectiveSort !== currentSort ? [] : posts,
+        // Only clear posts if filters changed (not on simple refresh)
+        posts: effectiveCategory !== currentCategory || effectiveSort !== currentSort ? [] : posts,
         currentCategory: effectiveCategory || "All",
         currentSort: effectiveSort
       });

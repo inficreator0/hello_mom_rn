@@ -1,24 +1,21 @@
-const API_BASE_URL = "https://motherhood-community-app-latest.onrender.com/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Get JWT token from localStorage
-const getToken = (): string | null => {
-  return typeof window !== "undefined"
-    ? window.localStorage.getItem("token")
-    : null;
+const API_BASE_URL = "http://hellomom-api.ddns.net:8080/api";
+
+// Get JWT token from AsyncStorage
+const getToken = async (): Promise<string | null> => {
+  return await AsyncStorage.getItem("token");
 };
 
-// Set JWT token in localStorage
-export const setToken = (token: string): void => {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem("token", token);
-  }
+// Set JWT token in AsyncStorage
+export const setToken = async (token: string): Promise<void> => {
+  await AsyncStorage.setItem("token", token);
 };
 
-// Remove JWT token from localStorage
-export const clearAuthStorage = (): void => {
-  if (typeof window === "undefined") return;
-  window.localStorage.removeItem("token");
-  window.localStorage.removeItem("user");
+// Remove JWT token from AsyncStorage
+export const clearAuthStorage = async (): Promise<void> => {
+  await AsyncStorage.removeItem("token");
+  await AsyncStorage.removeItem("user");
 };
 
 // API request helper
@@ -26,7 +23,7 @@ export const apiRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> => {
-  const token = getToken();
+  const token = await getToken();
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...options.headers,
@@ -42,12 +39,10 @@ export const apiRequest = async <T>(
   });
 
   if (!response.ok) {
-    // If the token is invalid/expired, clear local session and redirect to login
+    // If the token is invalid/expired, clear local session
     if (response.status === 401 || response.status === 403) {
-      clearAuthStorage();
-      if (typeof window !== "undefined") {
-        window.location.replace("/login");
-      }
+      await clearAuthStorage();
+      // Navigation will be handled by the app's auth state
     }
 
     const errorData = await response.json().catch(() => ({}));

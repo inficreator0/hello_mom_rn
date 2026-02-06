@@ -1,10 +1,12 @@
-import { Heart, Users, Activity, MessageCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import * as React from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { Heart, Users, Activity, MessageCircle, ChevronRight } from "lucide-react-native";
+import { Card, CardHeader, CardTitle } from "../components/ui/card";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const Home = () => {
-  const navigate = useNavigate();
+  const navigation = useNavigation<any>();
 
   const features = [
     {
@@ -12,90 +14,168 @@ const Home = () => {
       title: "Community",
       description: "Connect with other mothers, share experiences, and get support",
       action: "Explore Community",
-      path: "/",
-      color: "text-primary",
-      bgColor: "bg-primary/10",
+      path: "Home", // Navigates to the Community tab in our current setup
+      color: "#ec4899", // primary
+      bgColor: "rgba(255, 107, 107, 0.1)", // primary/10
     },
     {
       icon: Activity,
       title: "Health Trackers",
       description: "Track baby's growth, feeding, sleep, and your recovery progress",
       action: "View Trackers",
-      path: "/trackers",
-      color: "text-accent-foreground",
-      bgColor: "bg-accent/30",
+      path: "TrackersTab",
+      color: "#0f172a", // accent-foreground/foreground
+      bgColor: "rgba(241, 245, 249, 1)", // accent/30 approximated to light gray
     },
     {
       icon: MessageCircle,
       title: "Consultations",
       description: "Book appointments with healthcare professionals",
       action: "Find Doctors",
-      path: "/consultations",
-      color: "text-secondary-foreground",
-      bgColor: "bg-secondary/50",
+      path: "ConsultTab",
+      color: "#0f172a", // secondary-foreground
+      bgColor: "rgba(226, 232, 240, 0.5)", // secondary/50
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background pb-20">
-      <div className="container mx-auto px-4 py-10 max-w-6xl">
-        <div className="text-center mb-10 animate-in fade-in-0 slide-in-from-top-2 duration-300">
-          <div className="flex justify-center mb-4">
-            <div className="rounded-full bg-primary/10 p-4">
-              <Heart className="h-12 w-12 text-primary fill-primary" />
-            </div>
-          </div>
-          <h1 className="text-4xl font-bold text-foreground mb-2">Hello Mom</h1>
-          <p className="text-lg text-muted-foreground">
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.flex1} showsVerticalScrollIndicator={false}>
+        <View style={styles.heroSection}>
+          <View style={styles.heroIconWrapper}>
+            <Heart size={48} color="#ec4899" fill="#ec4899" />
+          </View>
+          <Text style={styles.heroTitle}>Hello Mom</Text>
+          <Text style={styles.heroSubtitle}>
             Your supportive community for pregnancy, postpartum, and beyond
-          </p>
-        </div>
+          </Text>
+        </View>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10 animate-in fade-in-0 slide-in-from-bottom-2 duration-300 delay-75">
+        <View style={styles.featuresList}>
           {features.map((feature) => {
             const Icon = feature.icon;
             return (
-              <Card
+              <Pressable
                 key={feature.title}
-                className="cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all flex flex-col border border-border/50 bg-card/95"
-                onClick={() => navigate(feature.path)}
+                onPress={() => navigation.navigate('Main', { screen: feature.path })}
               >
-                <CardHeader className="flex-1">
-                  <div className="flex flex-col items-center text-center gap-4">
-                    <div className={`${feature.color} ${feature.bgColor} rounded-xl p-4 transition-transform hover:scale-110`}>
-                      <Icon className="h-8 w-8" />
-                    </div>
-                    <div className="w-full">
-                      <CardTitle className="text-xl mb-2">{feature.title}</CardTitle>
-                      <CardDescription>
-                        {feature.description}
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Button variant="outline" className="w-full">
-                    {feature.action}
-                  </Button>
-                </CardContent>
-              </Card>
+                <Card style={styles.featureCard}>
+                  <CardHeader style={styles.featureCardHeader}>
+                    <View style={[styles.featureIconContainer, { backgroundColor: feature.bgColor }]}>
+                      <Icon size={24} color={feature.color} />
+                    </View>
+                    <View style={styles.featureTextContainer}>
+                      <CardTitle style={styles.featureTitle}>{feature.title}</CardTitle>
+                      <Text style={styles.featureDescription}>{feature.description}</Text>
+                    </View>
+                    <ChevronRight size={20} color="#64748b" />
+                  </CardHeader>
+                </Card>
+              </Pressable>
             );
           })}
-        </div>
+        </View>
 
-        <Card className="bg-gradient-to-br from-primary/10 via-accent/10 to-secondary/10 border-primary/20 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-center">Welcome to Your Journey</CardTitle>
-            <CardDescription className="text-center">
-              Whether you're expecting, just gave birth, or navigating motherhood,
-              you're not alone. Our community is here to support you every step of the way.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    </div>
+        <View style={styles.welcomeSection}>
+          <Card style={styles.welcomeCard}>
+            <CardHeader>
+              <Text style={styles.welcomeTitle}>Welcome to Your Journey</Text>
+              <Text style={styles.welcomeText}>
+                Whether you're expecting, just gave birth, or navigating motherhood,
+                you're not alone. Our community is here to support you every step of the way.
+              </Text>
+            </CardHeader>
+          </Card>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent', // background
+  },
+  flex1: {
+    flex: 1,
+  },
+  heroSection: {
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+    alignItems: 'center',
+  },
+  heroIconWrapper: {
+    backgroundColor: 'rgba(255, 107, 107, 0.1)', // primary/10
+    padding: 20,
+    borderRadius: 9999,
+    marginBottom: 16,
+  },
+  heroTitle: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#0f172a',
+    marginBottom: 8,
+  },
+  heroSubtitle: {
+    textAlign: 'center',
+    color: '#64748b', // muted-foreground
+    fontSize: 18,
+    paddingHorizontal: 16,
+  },
+  featuresList: {
+    paddingHorizontal: 16,
+    gap: 16,
+    marginBottom: 32,
+  },
+  featureCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.5)', // border/50
+    backgroundColor: '#ffffff', // card
+    overflow: 'hidden',
+  },
+  featureCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingVertical: 16,
+  },
+  featureIconContainer: {
+    padding: 12,
+    borderRadius: 12,
+  },
+  featureTextContainer: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 18,
+  },
+  featureDescription: {
+    color: '#64748b', // muted-foreground
+    fontSize: 12,
+  },
+  welcomeSection: {
+    paddingHorizontal: 16,
+    marginBottom: 40,
+  },
+  welcomeCard: {
+    backgroundColor: 'rgba(255, 107, 107, 0.05)', // primary/5
+    borderColor: 'rgba(255, 107, 107, 0.2)', // primary/20
+    borderWidth: 1,
+  },
+  welcomeTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+    color: '#0f172a',
+  },
+  welcomeText: {
+    textAlign: 'center',
+    color: '#64748b', // muted-foreground
+    lineHeight: 20,
+  },
+});
 
 export default Home;
 

@@ -1,32 +1,48 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, StyleSheet } from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { ArrowLeft } from "lucide-react-native";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Textarea } from "../components/ui/textarea";
 import { CommunityCategory, PostFormData } from "../types";
 import { usePostsStore, transformPost } from "../store/postsStore";
 import { postsAPI } from "../lib/api/posts";
 import { useToast } from "../context/ToastContext";
+import { SafeAreaView } from "react-native-safe-area-context";
+import MultiSelect from "../components/common/MultiSelect";
 
-const CATEGORIES: CommunityCategory[] = ["All", "Pregnancy", "Postpartum", "Feeding", "Sleep", "Mental Health", "Recovery", "Milestones"];
+const CATEGORIES: CommunityCategory[] = ["Pregnancy", "Postpartum", "Feeding", "Sleep", "Mental Health", "Recovery", "Milestones"];
+
+const FLAIR_OPTIONS = [
+    "Question",
+    "Advice Needed",
+    "Vent",
+    "Success Story",
+    "Discussion",
+    "Resource",
+    "Other"
+];
 
 const CreatePost = () => {
-    const navigate = useNavigate();
-    const { addPost } = usePostsStore();
+    const navigation = useNavigation<any>();
+    const { addPost, updatePost } = usePostsStore(); // Add updatePost from store
     const { showToast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Check for edit mode
+    const route = useRoute();
+    const editingPost = (route.params as any)?.post;
+    const isEditMode = !!editingPost;
+
     const [formData, setFormData] = useState<PostFormData>({
-        title: "",
-        content: "",
-        category: "All",
-        flair: "",
+        title: editingPost?.title || "",
+        content: editingPost?.content || "",
+        category: editingPost?.category ? editingPost.category.split(",") : [],
+        flair: editingPost?.flair ? editingPost.flair.split(",") : [],
     });
 
-    const handleChange = (field: keyof PostFormData, value: string) => {
+    const handleChange = (field: keyof PostFormData, value: string | string[]) => {
         setFormData({ ...formData, [field]: value });
     };
 
@@ -35,21 +51,29 @@ const CreatePost = () => {
 
         setIsSubmitting(true);
         try {
-            const backendPost = await postsAPI.create({
+            const postData = {
                 title: formData.title,
                 content: formData.content,
-                category: formData.category !== "All" ? formData.category : undefined,
-                flair: formData.flair || undefined,
-            });
+                category: formData.category.join(","),
+                flair: formData.flair.join(","),
+            };
 
-            const newPost = transformPost(backendPost);
-            addPost(newPost);
+            if (isEditMode) {
+                const updatedBackendPost = await postsAPI.update(editingPost.id, postData);
+                const updatedPost = transformPost(updatedBackendPost);
+                updatePost(editingPost.id, (p) => ({ ...p, ...updatedPost })); // Update store
+                showToast("Post updated successfully", "success");
+            } else {
+                const backendPost = await postsAPI.create(postData);
+                const newPost = transformPost(backendPost);
+                addPost(newPost);
+                showToast("Post created successfully", "success");
+            }
 
-            showToast("Post created successfully", "success");
-            navigate("/community");
+            navigation.goBack();
         } catch (error: any) {
-            console.error("Error creating post:", error);
-            showToast(error.message || "Failed to create post. Please try again.", "error");
+            console.error("Error saving post:", error);
+            showToast(isEditMode ? "Failed to update post" : "Failed to create post", "error");
         } finally {
             setIsSubmitting(false);
         }
@@ -58,103 +82,164 @@ const CreatePost = () => {
     const isDisabled = isSubmitting || !formData.title.trim() || !formData.content.trim();
 
     return (
-        <div className="pb-20">
-            <div className="container mx-auto px-4 py-6 max-w-2xl">
-                <Button
-                    variant="ghost"
-                    onClick={() => navigate("/community")}
-                    className="mb-4"
-                >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Community
-                </Button>
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <View style={styles.header}>
+                <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ArrowLeft size={24} color="#0f172a" />
+                </Pressable>
+                <Text style={styles.headerTitle}>{isEditMode ? "Edit Post" : "Create Post"}</Text>
+            </View>
 
-                <Card className="border border-border/60 shadow-lg animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-                    <CardHeader>
-                        <CardTitle className="text-xl">Create New Post</CardTitle>
-                        <CardDescription>
-                            Share your thoughts, ask questions, or offer support to the community.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid gap-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="title" className="text-base">Title</Label>
-                            <Input
-                                id="title"
-                                placeholder="What's on your mind?"
-                                value={formData.title}
-                                onChange={(e) => handleChange("title", e.target.value)}
-                                disabled={isSubmitting}
-                                className="text-sm"
-                            />
-                        </div>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.flex1}
+            >
+                <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+                    <Card style={styles.postCard}>
+                        <CardHeader>
+                            <CardTitle>What's on your mind?</CardTitle>
+                            <CardDescription>
+                                Share your thoughts with the community.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent style={styles.cardContent}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Title</Text>
+                                <Input
+                                    placeholder="Enter title"
+                                    value={formData.title}
+                                    onChangeText={(text) => handleChange("title", text)}
+                                    editable={!isSubmitting}
+                                />
+                            </View>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="category" className="text-base">Category</Label>
-                            <select
-                                id="category"
-                                className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                value={formData.category}
-                                onChange={(e) => handleChange("category", e.target.value)}
-                                disabled={isSubmitting}
-                            >
-                                {CATEGORIES.filter((c) => c !== "All").map((cat) => (
-                                    <option key={cat} value={cat}>
-                                        {cat}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                            <View style={styles.inputGroup}>
+                                <MultiSelect
+                                    label="Category"
+                                    options={CATEGORIES}
+                                    selectedValues={formData.category}
+                                    onSelectionChange={(values) => handleChange("category", values)}
+                                    placeholder="Select categories"
+                                />
+                            </View>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="flair" className="text-base">
-                                Flair <span className="text-muted-foreground text-sm font-normal">(optional)</span>
-                            </Label>
-                            <Input
-                                id="flair"
-                                placeholder="e.g., Question, Advice, Vent"
-                                value={formData.flair || ""}
-                                onChange={(e) => handleChange("flair", e.target.value)}
-                                disabled={isSubmitting}
-                                className="text-sm"
-                            />
-                        </div>
+                            <View style={styles.inputGroup}>
+                                <MultiSelect
+                                    label="Flair (Optional)"
+                                    options={FLAIR_OPTIONS}
+                                    selectedValues={formData.flair}
+                                    onSelectionChange={(values) => handleChange("flair", values)}
+                                    placeholder="Select flair"
+                                />
+                            </View>
 
-                        <div className="grid gap-2">
-                            <Label htmlFor="content" className="text-base">Content</Label>
-                            <Textarea
-                                id="content"
-                                placeholder="Write your post content here..."
-                                value={formData.content}
-                                onChange={(e) => handleChange("content", e.target.value)}
-                                rows={10}
-                                disabled={isSubmitting}
-                                className="resize-none min-h-[200px]"
-                            />
-                        </div>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Content</Text>
+                                <TextInput
+                                    style={styles.contentTextarea}
+                                    placeholder="Write your post content here..."
+                                    multiline
+                                    numberOfLines={8}
+                                    textAlignVertical="top"
+                                    value={formData.content}
+                                    onChangeText={(text) => handleChange("content", text)}
+                                    editable={!isSubmitting}
+                                />
+                            </View>
 
-                        <div className="flex justify-end gap-3 mt-4">
-                            <Button
-                                variant="outline"
-                                onClick={() => navigate("/community")}
-                                disabled={isSubmitting}
-                                className="w-full sm:w-auto"
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                onClick={handleSubmit}
-                                disabled={isDisabled}
-                                className="w-full sm:w-auto"
-                            >
-                                {isSubmitting ? "Posting..." : "Create Post"}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
+                            <View style={styles.actionsRow}>
+                                <Button
+                                    variant="outline"
+                                    style={styles.flex1}
+                                    onPress={() => navigation.goBack()}
+                                    disabled={isSubmitting}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    style={styles.flex1}
+                                    onPress={handleSubmit}
+                                    disabled={isDisabled}
+                                >
+                                    {isSubmitting ? (
+                                        <ActivityIndicator color="white" />
+                                    ) : (
+                                        <Text style={styles.buttonText}>{isEditMode ? "Update" : "Post"}</Text>
+                                    )}
+                                </Button>
+                            </View>
+                        </CardContent>
+                    </Card>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
     );
 };
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: 'transparent',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+    },
+    backButton: {
+        padding: 8,
+    },
+    headerTitle: {
+        fontSize: 16, // Reduced font size
+        fontWeight: 'bold',
+        marginLeft: 8,
+        color: '#0f172a',
+    },
+    flex1: {
+        flex: 1,
+    },
+    scrollView: {
+        flex: 1,
+        paddingHorizontal: 16,
+        paddingVertical: 16,
+    },
+    postCard: {
+        marginBottom: 24,
+    },
+    cardContent: {
+        gap: 24,
+    },
+    inputGroup: {
+        gap: 6,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: '#0f172a',
+    },
+    contentTextarea: {
+        minHeight: 150,
+        width: '100%',
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#e2e8f0', // input
+        backgroundColor: '#ffffff', // background
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 14,
+        color: '#0f172a',
+    },
+    actionsRow: {
+        flexDirection: 'row',
+        gap: 16,
+        marginTop: 8,
+        marginBottom: 40,
+    },
+    buttonText: {
+        color: '#ffffff',
+        fontWeight: 'bold',
+    },
+});
 
 export default CreatePost;

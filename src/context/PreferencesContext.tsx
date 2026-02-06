@@ -6,6 +6,7 @@ import {
   ReactNode,
   useCallback,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type UsageMode = "community" | "baby";
 
@@ -54,29 +55,35 @@ export const PreferencesProvider = ({ children }: PreferencesProviderProps) => {
     focusAreas: [],
   });
 
-  // Load from localStorage on mount
+  // Load from AsyncStorage on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(PREFERENCES_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setPreferences((prev) => ({
-          ...prev,
-          ...parsed,
-        }));
+    const loadPreferences = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(PREFERENCES_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setPreferences((prev) => ({
+            ...prev,
+            ...parsed,
+          }));
+        }
+      } catch (err) {
+        console.error("Error loading preferences", err);
       }
-    } catch (err) {
-      console.error("Error loading preferences", err);
-    }
+    };
+    loadPreferences();
   }, []);
 
-  // Persist to localStorage
+  // Persist to AsyncStorage
   useEffect(() => {
-    try {
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
-    } catch (err) {
-      console.error("Error saving preferences", err);
-    }
+    const savePreferences = async () => {
+      try {
+        await AsyncStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+      } catch (err) {
+        console.error("Error saving preferences", err);
+      }
+    };
+    savePreferences();
   }, [preferences]);
 
   const setMode = useCallback((mode: UsageMode) => {

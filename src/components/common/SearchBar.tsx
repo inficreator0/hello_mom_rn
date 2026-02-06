@@ -1,64 +1,105 @@
-import { Search, X } from "lucide-react";
-import { Input } from "../ui/input";
+import { Search, X, Filter } from "lucide-react-native";
+import { View, TextInput, Pressable, StyleSheet, ViewStyle } from "react-native";
 
 interface SearchBarProps {
   placeholder?: string;
   value: string;
   onChange: (value: string) => void;
-  className?: string;
+  style?: ViewStyle | ViewStyle[];
   onFilterClick?: () => void;
 }
 
-const SearchBar = ({ placeholder = "Search...", value, onChange, className, onFilterClick }: SearchBarProps) => {
+const SearchBar = ({ placeholder = "Search...", value, onChange, style, onFilterClick }: SearchBarProps) => {
   const hasValue = value.trim().length > 0;
 
   return (
-    <div className={`flex gap-2 items-center ${className || ""}`}>
-      <div className="flex-1 flex items-center h-10 rounded-full bg-card border border-border/60 px-3 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30 focus-within:ring-offset-0 transition">
-        <Search className="h-4 w-4 text-muted-foreground mr-2" />
-        <Input
+    <View style={[styles.container, style]}>
+      <View style={styles.searchSection}>
+        <Search size={18} color="#64748b" style={styles.searchIcon} />
+        <TextInput
           placeholder={placeholder}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="flex-1 h-8 border-none bg-transparent px-0 text-sm focus-visible:ring-0 focus-visible:outline-none focus-visible:ring-offset-0"
+          onChangeText={onChange}
+          placeholderTextColor="#94a3b8"
+          style={styles.input}
         />
         {hasValue && (
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted transition"
-            aria-label="Clear search"
+          <Pressable
+            onPress={() => onChange("")}
+            style={styles.clearButton}
           >
-            <X className="h-3 w-3" />
-          </button>
+            <X size={16} color="#64748b" />
+          </Pressable>
         )}
-      </div>
+      </View>
 
       {onFilterClick && (
-        <button
-          type="button"
-          onClick={onFilterClick}
-          className="h-10 w-10 shrink-0 inline-flex items-center justify-center rounded-full bg-card border border-border/60 shadow-sm text-foreground hover:bg-muted transition focus:outline-none focus:ring-2 focus:ring-primary/30"
-          aria-label="Filter"
+        <Pressable
+          onPress={onFilterClick}
+          style={styles.filterButton}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-          </svg>
-        </button>
+          <Filter size={18} color="#0f172a" />
+        </Pressable>
       )}
-    </div>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  searchSection: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 42,
+    borderRadius: 24,
+    backgroundColor: '#ffffff', // card
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.6)', // border/60
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    fontSize: 16,
+    color: '#0f172a', // foreground
+  },
+  clearButton: {
+    marginLeft: 4,
+    height: 32,
+    width: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
+  },
+  filterButton: {
+    height: 42,
+    width: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.6)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+});
 
 export default SearchBar;
 
