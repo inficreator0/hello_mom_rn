@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, TextInput, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, TextInput, StyleSheet, Switch } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { SvgUri } from "react-native-svg";
-
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { useToast } from "../context/ToastContext";
 
 const Profile = () => {
@@ -29,6 +29,7 @@ const Profile = () => {
   );
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"my-posts" | "saved-posts">("my-posts");
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [bookmarks, setBookmarks] = useState<Post[]>([]);
   const [stats, setStats] = useState({
@@ -48,6 +49,12 @@ const Profile = () => {
 
   const updateLocalPost = (postId: string | number, updates: Partial<Post>) => {
     setMyPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, ...updates } : p))
+    );
+  };
+
+  const updateLocalBookmark = (postId: string | number, updates: Partial<Post>) => {
+    setBookmarks((prev) =>
       prev.map((p) => (p.id === postId ? { ...p, ...updates } : p))
     );
   };
@@ -148,6 +155,56 @@ const Profile = () => {
       console.error("Bookmark failed", error);
       showToast("Failed to update bookmark", "error");
       updateLocalPost(postId, { bookmarked: isBookmarked });
+    }
+  };
+
+  const handleVoteSaved = async (postId: string | number, voteType: "up" | "down") => {
+    const post = bookmarks.find((p) => p.id === postId);
+    if (!post) return;
+
+    const currentVote = post.userVote;
+    let newVote: "up" | "down" | null = voteType;
+    let voteChange = 0;
+
+    if (currentVote === voteType) {
+      newVote = null;
+      voteChange = voteType === "up" ? -1 : 1;
+    } else {
+      if (currentVote === "up") voteChange -= 1;
+      if (currentVote === "down") voteChange += 1;
+      if (voteType === "up") voteChange += 1;
+      if (voteType === "down") voteChange -= 1;
+    }
+
+    updateLocalBookmark(postId, {
+      userVote: newVote,
+      votes: (post.votes || 0) + voteChange,
+    });
+
+    try {
+      if (voteType === "up") {
+        await postsAPI.upvote(String(postId));
+      } else {
+        await postsAPI.downvote(String(postId));
+      }
+    } catch (error) {
+      console.error("Vote failed", error);
+      showToast("Failed to vote", "error");
+      updateLocalBookmark(postId, {
+        userVote: currentVote,
+        votes: post.votes,
+      });
+    }
+  };
+
+  const handleBookmarkSaved = async (postId: string | number) => {
+    try {
+      await postsAPI.unsave(String(postId));
+      showToast("Post removed from saved", "success");
+      setBookmarks((prev) => prev.filter((p) => p.id !== postId));
+    } catch (error) {
+      console.error("Unsave failed", error);
+      showToast("Failed to remove from saved", "error");
     }
   };
 
@@ -317,21 +374,14 @@ const Profile = () => {
             <Text style={styles.settingsDescription}>
               Focus on baby-themed trackers and tools across the app.
             </Text>
-            <View style={styles.modeButtons}>
-              <Button
-                style={styles.flex1}
-                variant={mode === "baby" ? "default" : "outline"}
-                onPress={() => setMode("baby")}
-              >
-                Baby Mode
-              </Button>
-              <Button
-                style={styles.flex1}
-                variant={mode === "community" ? "default" : "outline"}
-                onPress={() => setMode("community")}
-              >
-                Community
-              </Button>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Enable Baby Mode</Text>
+              <Switch
+                value={mode === "baby"}
+                onValueChange={(enabled) => setMode(enabled ? "baby" : "community")}
+                trackColor={{ false: "#e2e8f0", true: "#fbcfe8" }}
+                thumbColor={mode === "baby" ? "#ec4899" : "#94a3b8"}
+              />
             </View>
           </CardContent>
         </Card>
@@ -360,41 +410,75 @@ const Profile = () => {
           </Card>
         )}
 
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <StatCard label="Posts" value={stats.postsCount} />
-          <StatCard label="Comments" value={stats.commentsCount} />
-          <StatCard label="Saved" value={stats.savedCount} />
-          <StatCard label="Upvotes" value={stats.totalUpvotesReceived} />
-        </View>
+        {/* My Posts / Saved Posts Tabs */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "my-posts" | "saved-posts")} style={styles.tabsContainer}>
+          <TabsList style={styles.tabsList}>
+            <TabsTrigger value="my-posts" style={styles.tabTrigger}>
+              My Posts {myPosts.length > 0 && `(${myPosts.length})`}
+            </TabsTrigger>
+            <TabsTrigger value="saved-posts" style={styles.tabTrigger}>
+              Saved Posts {bookmarks.length > 0 && `(${bookmarks.length})`}
+            </TabsTrigger>
+          </TabsList>
 
-        {/* My Posts */}
-        <Text style={styles.sectionTitleLarge}>My Recent Posts</Text>
-        {isLoading ? (
-          <View style={[styles.postsList, styles.skeletonGap]}>
-            <PostCardSkeleton />
-            <PostCardSkeleton />
-          </View>
-        ) : myPosts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>You haven't posted anything yet.</Text>
-          </View>
-        ) : (
-          <View style={styles.postsList}>
-            {myPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onVote={handleVote}
-                onBookmark={handleBookmark}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onReport={handleReport}
-                showActions={false}
-              />
-            ))}
-          </View>
-        )}
+          <TabsContent value="my-posts" style={styles.tabsContent}>
+            {isLoading ? (
+              <View style={[styles.postsList, styles.skeletonGap]}>
+                <PostCardSkeleton />
+                <PostCardSkeleton />
+              </View>
+            ) : myPosts.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>You haven't posted anything yet.</Text>
+              </View>
+            ) : (
+              <View style={styles.postsList}>
+                {myPosts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onVote={handleVote}
+                    onBookmark={handleBookmark}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onReport={handleReport}
+                    showActions={false}
+                  />
+                ))}
+              </View>
+            )}
+          </TabsContent>
+
+          <TabsContent value="saved-posts" style={styles.tabsContent}>
+            {isLoading ? (
+              <View style={[styles.postsList, styles.skeletonGap]}>
+                <PostCardSkeleton />
+                <PostCardSkeleton />
+              </View>
+            ) : bookmarks.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>You haven't saved any posts yet.</Text>
+                <Text style={styles.emptyStateSubtext}>Tap the bookmark icon on any post to save it here.</Text>
+              </View>
+            ) : (
+              <View style={styles.postsList}>
+                {bookmarks.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onVote={handleVoteSaved}
+                    onBookmark={handleBookmarkSaved}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    onReport={handleReport}
+                    showActions={false}
+                    elevated={true}
+                  />
+                ))}
+              </View>
+            )}
+          </TabsContent>
+        </Tabs>
       </ScrollView>
     </PageContainer>
   );
@@ -417,7 +501,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 0,
   },
   header: {
     flexDirection: 'row',
@@ -466,7 +550,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   bioCardContent: {
-    paddingTop: 24,
+    paddingTop: 12,
   },
   bioHeader: {
     flexDirection: 'row',
@@ -535,6 +619,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  toggleLabel: {
+    fontSize: 15,
+    color: '#0f172a',
+    fontWeight: '500',
+  },
   flex1: {
     flex: 1,
   },
@@ -580,6 +675,18 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 32,
   },
+  tabsContainer: {
+    marginBottom: 24,
+  },
+  tabsList: {
+    marginBottom: 16,
+  },
+  tabTrigger: {
+    flex: 1,
+  },
+  tabsContent: {
+    marginTop: 0,
+  },
   statCard: {
     flex: 1,
     minWidth: '45%',
@@ -612,6 +719,12 @@ const styles = StyleSheet.create({
   emptyStateText: {
     color: '#64748b',
     textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    color: '#94a3b8',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 8,
   },
   postsList: {
     paddingBottom: 40,

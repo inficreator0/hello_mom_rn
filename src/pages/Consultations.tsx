@@ -77,9 +77,9 @@ export const Consultations = () => {
       <ScreenHeader title="Consult Experts" showBackButton={false} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.subtitle}>Talk to trusted doctors instantly.</Text>
-          </View>
+
+          <Text style={styles.subtitle}>Talk to trusted doctors instantly.</Text>
+
           <View style={styles.sparkleIconWrapper}>
             <Sparkles size={18} color="#ec4899" />
           </View>
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   title: {
     fontSize: 24,
@@ -160,6 +160,7 @@ const styles = StyleSheet.create({
   },
   doctorList: {
     gap: 24,
+    flex: 1,
     paddingBottom: 40,
   },
   cardContent: {

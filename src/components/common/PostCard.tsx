@@ -50,6 +50,8 @@ interface PostCardProps {
   formatDate?: (date: Date | string) => string;
   showActions?: boolean;
   onReport?: (postId: string | number, reason: string) => void;
+  /** When true, card has shadow/elevation for a tappable, raised appearance */
+  elevated?: boolean;
 }
 
 /* ---------------------------------------------
@@ -289,6 +291,7 @@ const PostCard = memo(({
   onReport,
   formatDate,
   showActions = true,
+  elevated = false,
 }: PostCardProps) => {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
@@ -333,10 +336,10 @@ const PostCard = memo(({
       onPress={() => navigation.navigate("PostDetail", { id: post.id })}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      style={styles.pressableMargin}
+      style={[styles.pressableMargin, elevated && styles.pressableElevated]}
     >
       <Animated.View style={animatedStyle}>
-        <Card style={styles.cardOverride}>
+        <Card style={[styles.cardOverride, elevated && styles.cardElevated]}>
           <PostCardHeader
             post={post}
             isAuthor={isAuthor}
@@ -371,6 +374,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     shadowOpacity: 0,
     elevation: 0,
+  },
+  cardElevated: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
   headerContainer: {
     flexDirection: 'row',
@@ -456,11 +466,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionChip: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
+    flexShrink: 0,
   },
   chipButton: {
     height: 32,
@@ -468,18 +479,20 @@ const styles = StyleSheet.create({
     borderRadius: 0, // Let the parent View handle rounding
   },
   votingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
   },
   voteButton: {
     height: 32,
     width: 32,
+    flexShrink: 0,
   },
   voteCount: {
-    fontWeight: 'bold',
-    minWidth: 20,
-    textAlign: 'center',
+    fontWeight: "600",
+    minWidth: 24,
+    textAlign: "center",
+    fontSize: 14,
   },
   primaryText: {
     color: '#ec4899',
@@ -507,8 +520,17 @@ const styles = StyleSheet.create({
   pressableMargin: {
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     borderRadius: 12,
+  },
+  pressableElevated: {
+    backgroundColor: "#ffffff",
+    borderColor: "#e2e8f0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });
 
