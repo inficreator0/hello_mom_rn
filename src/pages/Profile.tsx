@@ -364,14 +364,14 @@ const Profile = () => {
         <View style={styles.statsRow}>
           <StatCard label="Posts" value={stats.postsCount} />
           <StatCard label="Comments" value={stats.commentsCount} />
-          <StatCard label="Bookmarks" value={stats.savedCount} />
+          <StatCard label="Saved" value={stats.savedCount} />
           <StatCard label="Upvotes" value={stats.totalUpvotesReceived} />
         </View>
 
         {/* My Posts */}
         <Text style={styles.sectionTitleLarge}>My Recent Posts</Text>
         {isLoading ? (
-          <View style={styles.postsList}>
+          <View style={[styles.postsList, styles.skeletonGap]}>
             <PostCardSkeleton />
             <PostCardSkeleton />
           </View>
@@ -390,6 +390,7 @@ const Profile = () => {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onReport={handleReport}
+                showActions={false}
               />
             ))}
           </View>
@@ -613,9 +614,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   postsList: {
-    gap: 16,
     paddingBottom: 40,
   },
+  skeletonGap: {
+    gap: 12,
+  }
 });
 
 export { Profile };

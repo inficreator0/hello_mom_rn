@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "http://hellomom-api.ddns.net:8080/api";
+const API_BASE_URL = "https://hellomom-api.ddns.net/api";
 
 // Get JWT token from AsyncStorage
 const getToken = async (): Promise<string | null> => {

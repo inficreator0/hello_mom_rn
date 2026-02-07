@@ -90,3 +90,17 @@ export interface WeightData {
   birthHeight?: number;
   birthHeadCircumference?: number;
 }
+
+export interface Article {
+  id: number;
+  title: string;
+  content: string;
+  summary: string;
+  authorId: number;
+  authorUsername: string;
+  category: string;
+  featuredImageUrl: string;
+  viewCount: number;
+  isPublished: boolean;
+  publishedAt: string;
+}

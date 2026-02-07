@@ -13,7 +13,7 @@ import { PageContainer } from "../components/common/PageContainer";
 
 export const Onboarding = () => {
   const { mode, setMode, completeOnboarding, updatePreferences } = usePreferences();
-  const { checkOnboardingStatus } = useAuth();
+  const { checkOnboardingStatus, setIsOnboarded } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedPurpose, setSelectedPurpose] = useState<"baby" | "community" | null>(mode);
   const [babyName, setBabyName] = useState("");
@@ -37,10 +37,12 @@ export const Onboarding = () => {
     setSaving(true);
     try {
       // 1. Update backend state
-      const onboardingType = selectedPurpose === "baby" ? "pregnancy" : "general_health";
+      const onboardingType = selectedPurpose === "baby" ? "EXPECTING" : "GENERAL_HEALTH";
       await authAPI.completeOnboarding(onboardingType);
 
       // 2. Refresh AuthContext state (this will trigger App.tsx navigation)
+      setIsOnboarded(true);
+      // Still call backend check as a backup if needed, but the direct set should trigger navigation
       await checkOnboardingStatus();
 
       // 3. Update local preferences (existing logic)

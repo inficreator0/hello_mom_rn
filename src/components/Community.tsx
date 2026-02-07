@@ -30,23 +30,18 @@ const Community = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Sync with store on mount
+  // Sync with store and initial fetch on mount
   useEffect(() => {
     if (currentCategory) setSelectedCategory(currentCategory as CommunityCategory);
     if (currentSort) setSelectedSort(currentSort);
-  }, []);
-
-  // Initial fetch
-  useEffect(() => {
-    void refreshPosts(selectedCategory, selectedSort);
+    // Only fetch on initial mount
+    void refreshPosts(currentCategory || selectedCategory, currentSort || selectedSort);
   }, []);
 
   const handleApplyFilters = () => {
     setIsFilterOpen(false);
     void refreshPosts(selectedCategory, selectedSort);
   };
-
-
 
   const handleVote = async (postId: string | number, voteType: "up" | "down") => {
     const post = posts.find(p => p.id === postId);
@@ -153,8 +148,6 @@ const Community = () => {
     }
   };
 
-
-
   const filteredPosts = useMemo(() => {
     if (!searchQuery.trim()) return posts;
     return posts.filter(post =>
@@ -173,8 +166,9 @@ const Community = () => {
   };
 
   return (
-    <PageContainer style={styles.container}>
+    <PageContainer style={styles.container} edges={['top']}>
       <ScreenHeader title="Community" showBackButton={false} />
+
       <View style={styles.content}>
         <View style={styles.header}>
           <SearchBar
@@ -252,9 +246,9 @@ const Community = () => {
           onOpenChange={setIsFilterOpen}
           categories={CATEGORIES}
           selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+          onCategoryChange={(cat) => setSelectedCategory(cat as CommunityCategory)}
           selectedSort={selectedSort as "recent" | "upvotes"}
-          onSortChange={setSelectedSort}
+          onSortChange={(sort) => setSelectedSort(sort as "recent" | "upvotes")}
           onApply={handleApplyFilters}
         />
       </View>
@@ -282,7 +276,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   flatListContent: {
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
 });
 

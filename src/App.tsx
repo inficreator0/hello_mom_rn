@@ -18,6 +18,7 @@ import { PreferencesProvider } from './context/PreferencesContext';
 import { Profile } from './pages/Profile';
 import { Consultations } from './pages/Consultations';
 import { Articles } from './pages/Articles';
+import { ArticleDetail } from './pages/ArticleDetail';
 import { Onboarding } from './pages/Onboarding';
 import { PeriodTracker } from './pages/PeriodTracker';
 import { BabyWeightTracker } from './pages/BabyWeightTracker';
@@ -39,6 +40,8 @@ const linking = {
         alias: ['rest-password']
       },
       Login: 'login',
+      PostDetail: 'post/:id',
+      ArticleDetail: 'article/:id',
     },
   },
 };
@@ -128,6 +131,7 @@ const Navigation = () => {
             <>
               <Stack.Screen name="Main" component={MainTabs} />
               <Stack.Screen name="PostDetail" component={PostDetail} />
+              <Stack.Screen name="ArticleDetail" component={ArticleDetail} />
               <Stack.Screen name="CreatePost" component={CreatePost} />
               <Stack.Screen name="PeriodTracker" component={PeriodTracker} />
               <Stack.Screen name="BabyWeightTracker" component={BabyWeightTracker} />

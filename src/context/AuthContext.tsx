@@ -19,6 +19,7 @@ interface AuthContextType {
   isLoading: boolean;
   isOnboarded: boolean;
   checkOnboardingStatus: () => Promise<void>;
+  setIsOnboarded: (status: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -140,6 +141,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         isLoading,
         isOnboarded,
         checkOnboardingStatus,
+        setIsOnboarded,
       }}
     >
       {children}

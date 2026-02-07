@@ -10,8 +10,11 @@ import {
   Loader2,
   MoreVertical,
   Flag,
+  Share2,
 } from "lucide-react-native";
-import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
+import { View, Text, Pressable, Alert, StyleSheet, Share } from "react-native";
+import * as Linking from 'expo-linking';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "../ui/bottom-sheet";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import ConfirmationDialog from "./ConfirmationDialog";
 import { usePostsStore } from "../../store/postsStore";
@@ -91,7 +94,7 @@ const PostCardHeader = ({ post, isAuthor, formatDate, showActions, onEdit, onDel
   };
 
   return (
-    <CardHeader>
+    <CardHeader style={{ padding: 12, paddingLeft: 24 }}>
       <View style={styles.headerContainer}>
         <View style={styles.headerTitleContainer}>
           <CardTitle style={styles.titleText}>{post.title}</CardTitle>
@@ -115,52 +118,57 @@ const PostCardHeader = ({ post, isAuthor, formatDate, showActions, onEdit, onDel
               <MoreVertical color="#0f172a" size={16} />
             </Button>
 
-            {isMenuOpen && (
-              <View style={styles.menuDropdown}>
-                {isAuthor && onEdit && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    style={styles.menuItem}
-                    onPress={() => {
-                      setIsMenuOpen(false);
-                      onEdit(post);
-                    }}
-                  >
-                    <Edit2 size={14} color="#0f172a" style={styles.menuIcon} />
-                    <Text style={styles.menuText}>Edit</Text>
-                  </Button>
-                )}
-                {isAuthor && onDelete && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    style={styles.menuItem}
-                    onPress={() => {
-                      setIsMenuOpen(false);
-                      handleDeletePress();
-                    }}
-                  >
-                    <Trash2 size={14} color="#ef4444" style={styles.menuIcon} />
-                    <Text style={[styles.menuText, styles.destructiveText]}>Delete</Text>
-                  </Button>
-                )}
-                {!isAuthor && onReport && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    style={styles.menuItem}
-                    onPress={() => {
-                      setIsMenuOpen(false);
-                      setIsReportDialogOpen(true);
-                    }}
-                  >
-                    <Flag size={14} color="#0f172a" style={styles.menuIcon} />
-                    <Text style={styles.menuText}>Report</Text>
-                  </Button>
-                )}
-              </View>
-            )}
+            <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+              <SheetContent style={styles.sheetContent}>
+                <SheetHeader>
+                  <SheetTitle>Post Actions</SheetTitle>
+                </SheetHeader>
+                <View style={styles.actionList}>
+                  {isAuthor && onEdit && (
+                    <Pressable
+                      style={styles.actionItem}
+                      onPress={() => {
+                        setIsMenuOpen(false);
+                        onEdit(post);
+                      }}
+                    >
+                      <View style={[styles.actionIconContainer, { backgroundColor: '#f1f5f9' }]}>
+                        <Edit2 size={20} color="#0f172a" />
+                      </View>
+                      <Text style={styles.actionItemText}>Edit Post</Text>
+                    </Pressable>
+                  )}
+                  {isAuthor && onDelete && (
+                    <Pressable
+                      style={styles.actionItem}
+                      onPress={() => {
+                        setIsMenuOpen(false);
+                        handleDeletePress();
+                      }}
+                    >
+                      <View style={[styles.actionIconContainer, { backgroundColor: '#fef2f2' }]}>
+                        <Trash2 size={20} color="#ef4444" />
+                      </View>
+                      <Text style={[styles.actionItemText, { color: '#ef4444' }]}>Delete Post</Text>
+                    </Pressable>
+                  )}
+                  {!isAuthor && onReport && (
+                    <Pressable
+                      style={styles.actionItem}
+                      onPress={() => {
+                        setIsMenuOpen(false);
+                        setIsReportDialogOpen(true);
+                      }}
+                    >
+                      <View style={[styles.actionIconContainer, { backgroundColor: '#f1f5f9' }]}>
+                        <Flag size={20} color="#0f172a" />
+                      </View>
+                      <Text style={styles.actionItemText}>Report Post</Text>
+                    </Pressable>
+                  )}
+                </View>
+              </SheetContent>
+            </Sheet>
           </View>
         )}
       </View>
@@ -193,70 +201,80 @@ const PostCardActions = ({ post, onVote, onBookmark, onToggleComments }: PostCar
   return (
     <CardContent style={styles.actionsPadding}>
       <View style={styles.actionsRow}>
-        {/* Voting */}
+        {/* Voting Chip */}
         {onVote && (
-          <View style={styles.votingContainer}>
-            <Button variant="ghost" size="icon" style={styles.voteButton} onPress={() => onVote(post.id, "up")}>
-              <ArrowBigUp
-                size={20}
-                color={post.userVote === "up" ? "#ec4899" : "#94a3b8"}
-                fill={post.userVote === "up" ? "#ec4899" : "transparent"}
-              />
-            </Button>
+          <View style={styles.actionChip}>
+            <View style={styles.votingContainer}>
+              <Button variant="ghost" size="icon" style={styles.voteButton} onPress={() => onVote(post.id, "up")}>
+                <ArrowBigUp
+                  size={20}
+                  color={post.userVote === "up" ? "#ec4899" : "#94a3b8"}
+                  fill={post.userVote === "up" ? "#ec4899" : "transparent"}
+                />
+              </Button>
 
-            <Text style={[
-              styles.voteCount,
-              post.userVote === "up" ? styles.primaryText : post.userVote === "down" ? styles.blueText : styles.foregroundText
-            ]}>
-              {post.votes}
-            </Text>
+              <Text style={[
+                styles.voteCount,
+                post.userVote === "up" ? styles.primaryText : post.userVote === "down" ? styles.blueText : styles.foregroundText
+              ]}>
+                {post.votes}
+              </Text>
 
-            <Button variant="ghost" size="icon" style={styles.voteButton} onPress={() => onVote(post.id, "down")}>
-              <ArrowBigDown
-                size={20}
-                color={post.userVote === "down" ? "#2563eb" : "#94a3b8"}
-                fill={post.userVote === "down" ? "#2563eb" : "transparent"}
+              <Button variant="ghost" size="icon" style={styles.voteButton} onPress={() => onVote(post.id, "down")}>
+                <ArrowBigDown
+                  size={20}
+                  color={post.userVote === "down" ? "#2563eb" : "#94a3b8"}
+                  fill={post.userVote === "down" ? "#2563eb" : "transparent"}
+                />
+              </Button>
+            </View>
+          </View>
+        )}
+
+        {/* Comment Chip */}
+        <View style={styles.actionChip}>
+          <Button variant="ghost" size="sm" style={styles.chipButton} onPress={() => navigation.navigate("PostDetail", { id: post.id })}>
+            <MessageSquare size={16} color="#64748b" style={styles.actionIcon} />
+            <Text style={styles.actionText}>{post.commentCount || 0}</Text>
+          </Button>
+        </View>
+
+        {/* Share Chip */}
+        <View style={styles.actionChip}>
+          <Button
+            variant="ghost"
+            size="icon"
+            style={styles.chipButton}
+            onPress={async () => {
+              try {
+                const postLink = Linking.createURL(`post/${post.id}`);
+                await Share.share({
+                  message: `${post.title}\n\nCheck out this post on Nova: ${postLink}`,
+                  url: postLink,
+                });
+              } catch (error) {
+                console.error("Error sharing post:", error);
+              }
+            }}
+          >
+            <Share2 size={18} color="#94a3b8" />
+          </Button>
+        </View>
+
+        {/* Bookmark Chip */}
+        {onBookmark && (
+          <View style={styles.actionChip}>
+            <Button variant="ghost" size="icon" style={styles.chipButton} onPress={() => onBookmark(post.id)}>
+              <Bookmark
+                size={18}
+                color={post.bookmarked ? "#ec4899" : "#94a3b8"}
+                fill={post.bookmarked ? "#ec4899" : "transparent"}
               />
             </Button>
           </View>
         )}
-
-        {/* Comment Button */}
-        <Button variant="ghost" size="sm" onPress={() => navigation.navigate("PostDetail", { id: post.id })}>
-          <MessageSquare size={16} color="#64748b" style={styles.actionIcon} />
-          <Text style={styles.actionText}>{post.commentCount || 0}</Text>
-        </Button>
-
-        {/* Bookmark */}
-        {onBookmark && (
-          <Button variant="ghost" size="icon" onPress={() => onBookmark(post.id)}>
-            <Bookmark
-              size={18}
-              color={post.bookmarked ? "#ec4899" : "#94a3b8"}
-              fill={post.bookmarked ? "#ec4899" : "transparent"}
-            />
-          </Button>
-        )}
       </View>
     </CardContent>
-  );
-};
-
-/* FOOTER */
-const PostCardFooter = ({ postId }: { postId: string | number }) => {
-  const navigation = useNavigation<any>();
-
-  return (
-    <CardFooter style={styles.footerPadding}>
-      <Button
-        variant="ghost"
-        style={styles.fullWidthButton}
-        onPress={() => navigation.navigate("PostDetail", { id: postId })}
-      >
-        <MessageSquare size={16} color="#64748b" style={styles.actionIcon} />
-        <Text style={styles.mutedText}>Add a comment...</Text>
-      </Button>
-    </CardFooter>
   );
 };
 
@@ -299,7 +317,7 @@ const PostCard = memo(({
 
   const defaultFormatDate = (date: Date | string) => {
     const dateObj = typeof date === "string" ? new Date(date) : date;
-    return dateObj.toLocaleDateString();
+    return dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
   const format = formatDate || defaultFormatDate;
@@ -318,7 +336,7 @@ const PostCard = memo(({
       style={styles.pressableMargin}
     >
       <Animated.View style={animatedStyle}>
-        <Card>
+        <Card style={styles.cardOverride}>
           <PostCardHeader
             post={post}
             isAuthor={isAuthor}
@@ -340,88 +358,20 @@ const PostCard = memo(({
             />
           )}
 
-          {showActions && <PostCardFooter postId={post.id} />}
+          {/* {showActions && <PostCardFooter postId={post.id} />} */}
         </Card>
       </Animated.View>
     </Pressable>
   );
 });
 
-const CommentItem = ({
-  comment,
-  formatDate,
-  postId,
-  onReply,
-}: {
-  comment: Comment;
-  formatDate: (date: Date | string) => string;
-  postId: string | number;
-  onReply?: (
-    postId: string | number,
-    commentId: string | number,
-    replyContent: string
-  ) => void;
-}) => {
-  const [isReplyDialogOpen, setIsReplyDialogOpen] = useState(false);
-  const [replyText, setReplyText] = useState("");
-
-  const submitReply = () => {
-    if (!replyText.trim() || !onReply) return;
-    onReply(postId, String(comment.id), replyText);
-    setReplyText("");
-    setIsReplyDialogOpen(false);
-  };
-
-  const totalReplies = comment.replies?.length || 0;
-
-  return (
-    <>
-      <View style={styles.commentContainer}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.authorText}>{comment.author}</Text>
-          <Text style={styles.dateText}>{formatDate(comment.createdAt)}</Text>
-        </View>
-
-        <Text style={styles.commentContentText}>{comment.content}</Text>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          style={styles.replyButton}
-          onPress={() => setIsReplyDialogOpen(true)}
-        >
-          <Reply size={12} color="#64748b" style={styles.actionIcon} />
-          <Text style={styles.xsText}>Reply {totalReplies > 0 && `(${totalReplies})`}</Text>
-        </Button>
-
-        {totalReplies > 0 && (
-          <View style={styles.repliesWrapper}>
-            {comment.replies?.map((reply) => (
-              <View key={reply.id} style={styles.replyContainer}>
-                <View style={styles.headerContainer}>
-                  <Text style={styles.authorTextXs}>{reply.author}</Text>
-                  <Text style={styles.dateText}>{formatDate(reply.createdAt)}</Text>
-                </View>
-                <Text style={styles.replyContentText}>{reply.content}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-      </View>
-
-      <ReplyDialog
-        open={isReplyDialogOpen}
-        onOpenChange={setIsReplyDialogOpen}
-        replyingTo={comment.author}
-        value={replyText}
-        onChange={setReplyText}
-        onSubmit={submitReply}
-      />
-    </>
-  );
-};
 
 const styles = StyleSheet.create({
+  cardOverride: {
+    borderRadius: 12,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -448,22 +398,32 @@ const styles = StyleSheet.create({
     height: 32,
     width: 32,
   },
-  menuDropdown: {
-    position: 'absolute',
-    right: 0,
-    top: 40,
-    zIndex: 20,
-    minWidth: 120,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#e2e8f0', // border
-    backgroundColor: '#ffffff', // card
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+  sheetContent: {
+    paddingBottom: 40,
+  },
+  actionList: {
+    gap: 8,
+    marginTop: 8,
+  },
+  actionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+  },
+  actionIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  actionItemText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#0f172a',
   },
   menuItem: {
     justifyContent: 'flex-start',
@@ -480,7 +440,7 @@ const styles = StyleSheet.create({
     color: '#ef4444',
   },
   contentPadding: {
-    paddingBottom: 0,
+    paddingBottom: 4,
   },
   contentText: {
     marginBottom: 4,
@@ -488,12 +448,24 @@ const styles = StyleSheet.create({
     color: '#0f172a', // foreground
   },
   actionsPadding: {
-    paddingBottom: 0,
+    paddingBottom: 12,
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+  },
+  actionChip: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  chipButton: {
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 0, // Let the parent View handle rounding
   },
   votingContainer: {
     flexDirection: 'row',
@@ -523,10 +495,8 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 14,
-  },
-  footerPadding: {
-    paddingTop: 0,
-    paddingBottom: 4,
+    lineHeight: 16,
+    fontWeight: '500',
   },
   fullWidthButton: {
     fontSize: 14,
@@ -534,62 +504,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     paddingHorizontal: 0,
   },
-  mutedText: {
-    fontSize: 14,
-    color: '#64748b', // muted-foreground
-  },
   pressableMargin: {
-    marginBottom: 16,
-  },
-  commentContainer: {
-    backgroundColor: 'rgba(241, 245, 249, 0.5)', // muted/50
-    borderRadius: 8,
-    padding: 12,
-  },
-  commentContentText: {
-    fontSize: 14,
-    marginBottom: 8,
-    color: '#0f172a',
-  },
-  authorText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#0f172a',
-  },
-  authorTextXs: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#0f172a',
-  },
-  dateText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  replyButton: {
-    height: 28,
-    paddingHorizontal: 8,
-  },
-  xsText: {
-    fontSize: 12,
-  },
-  repliesWrapper: {
-    marginTop: 12,
-    marginLeft: 16,
-    borderLeftWidth: 2,
-    borderLeftColor: 'rgba(255, 107, 107, 0.2)', // primary/20
-    paddingLeft: 12,
-  },
-  replyContainer: {
-    backgroundColor: '#ffffff', // card
-    borderRadius: 6,
-    padding: 8,
-    marginBottom: 8,
-  },
-  replyContentText: {
-    fontSize: 12,
-    color: '#0f172a',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
   },
 });
 
-export { PostCard, CommentItem };
 export default PostCard;

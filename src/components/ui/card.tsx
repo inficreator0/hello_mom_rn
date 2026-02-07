@@ -71,13 +71,13 @@ CardFooter.displayName = "CardFooter"
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 24,
+    borderRadius: 12,
     backgroundColor: '#ffffff', // card
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   header: {
     flexDirection: 'column',

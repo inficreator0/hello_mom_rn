@@ -28,7 +28,7 @@ const FLAIR_OPTIONS = [
 
 const CreatePost = () => {
     const navigation = useNavigation<any>();
-    const { addPost, updatePost } = usePostsStore(); // Add updatePost from store
+    const { addPost, refreshPosts } = usePostsStore();
     const { showToast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,9 +61,9 @@ const CreatePost = () => {
             };
 
             if (isEditMode) {
-                const updatedBackendPost = await postsAPI.update(editingPost.id, postData);
-                const updatedPost = transformPost(updatedBackendPost);
-                updatePost(editingPost.id, (p) => ({ ...p, ...updatedPost })); // Update store
+                await postsAPI.update(editingPost.id, postData);
+                // Refresh the entire feed to ensure consistency
+                await refreshPosts(undefined, undefined, true);
                 showToast("Post updated successfully", "success");
             } else {
                 const backendPost = await postsAPI.create(postData);

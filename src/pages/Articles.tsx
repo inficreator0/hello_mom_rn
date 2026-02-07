@@ -1,21 +1,16 @@
-import { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, Image, FlatList, StyleSheet } from "react-native";
+import { useEffect, useState, useCallback } from "react";
+import { View, Text, ScrollView, Pressable, Image, FlatList, StyleSheet, ActivityIndicator, Share } from "react-native";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import SearchBar from "../components/common/SearchBar";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
-
-interface Article {
-  id: number;
-  title: string;
-  category: string;
-  preview: string;
-  image: string;
-  readTime: string;
-  alt?: string;
-}
+import { articlesAPI } from "../lib/api/articles";
+import { Article } from "../types";
+import { useToast } from "../context/ToastContext";
+import { useNavigation } from "@react-navigation/native";
+import { Share2 } from "lucide-react-native";
+import * as Linking from 'expo-linking';
 
 const CATEGORIES = [
   "All",
@@ -28,88 +23,102 @@ const CATEGORIES = [
   "Fitness & Recovery",
 ];
 
-const mockArticles: Article[] = [
-  {
-    id: 1,
-    title: "Body in the First Trimester",
-    category: "Pregnancy",
-    preview: "Learn about early pregnancy symptoms, changes, and precautions.",
-    readTime: "5 min read",
-    image: "https://images.unsplash.com/photo-1609171676687-85dfc9d37fac?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: 2,
-    title: "Postpartum Recovery Guide",
-    category: "Postpartum",
-    preview: "A realistic guide to healing physically and emotionally after birth.",
-    readTime: "4 min read",
-    image: "https://images.unsplash.com/photo-1607968565043-36c0f7e0f92b?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: 3,
-    title: "Boost Milk Supply Naturally",
-    category: "Breastfeeding",
-    preview: "Healthy, natural foods that can support milk production.",
-    readTime: "3 min read",
-    image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: 4,
-    title: "Managing Stress & Anxiety",
-    category: "Mental Health",
-    preview: "Techniques for staying balanced during motherhood.",
-    readTime: "6 min read",
-    image: "https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: 5,
-    title: "Prenatal Nutrition Guide",
-    category: "Nutrition",
-    preview: "A doctor-approved guide to balanced pregnancy diet.",
-    readTime: "6 min read",
-    image: "https://images.unsplash.com/photo-1543352634-093a2f8688d6?auto=format&fit=crop&w=1200&q=80",
-  }
-];
-
 export const Articles = () => {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const { showToast } = useToast();
+  const navigation = useNavigation<any>();
+
+  const fetchArticles = useCallback(async (category: string) => {
+    setIsLoading(true);
+    try {
+      let response;
+      if (category === "All") {
+        response = await articlesAPI.getPublished(0, 50);
+      } else {
+        response = await articlesAPI.getPublishedByCategory(category, 0, 50);
+      }
+
+      const mappedArticles = response.content.map(item => ({
+        ...item,
+        // Ensure properties exist for UI mapping
+        preview: item.summary,
+        image: item.featuredImageUrl,
+        readTime: "5 min read", // Mocking read time as backend doesn't provide it yet
+      }));
+
+      setArticles(mappedArticles);
+    } catch (error) {
+      console.error("Failed to fetch articles:", error);
+      showToast("Failed to load articles", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [showToast]);
 
   useEffect(() => {
-    setArticles(mockArticles);
-  }, []);
+    fetchArticles(selectedCategory);
+  }, [selectedCategory, fetchArticles]);
 
   const filteredArticles = articles.filter((article) => {
-    const matchesCategory =
-      selectedCategory === "All" || article.category === selectedCategory;
-
     const matchesSearch =
       searchQuery === "" ||
       article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      article.preview.toLowerCase().includes(searchQuery.toLowerCase());
+      article.summary.toLowerCase().includes(searchQuery.toLowerCase());
 
-    return matchesCategory && matchesSearch;
+    return matchesSearch;
   });
 
-  const renderArticle = ({ item }: { item: Article }) => (
+  const handleShare = async (article: Article) => {
+    try {
+      const articleLink = Linking.createURL(`article/${article.id}`);
+      await Share.share({
+        message: `${article.title}\n\nRead this article on Nova: ${articleLink}`,
+        url: articleLink,
+      });
+    } catch (error) {
+      console.error("Error sharing article:", error);
+    }
+  };
+
+  const renderArticle = ({ item }: { item: Article & { preview?: string, image?: string, readTime?: string } }) => (
     <Card style={styles.card}>
-      <Image
-        source={{ uri: item.image }}
-        style={styles.articleImage}
-        resizeMode="cover"
-      />
+      <Pressable onPress={() => navigation.navigate("ArticleDetail", { id: item.id })}>
+        <Image
+          source={{ uri: item.image || item.featuredImageUrl }}
+          style={styles.articleImage}
+          resizeMode="cover"
+        />
+      </Pressable>
       <CardContent style={styles.cardContent}>
-        <Text style={styles.articleTitle}>{item.title}</Text>
-        <Text style={styles.articleMeta}>
-          {item.category} • {item.readTime}
-        </Text>
-        <Text style={styles.articlePreview} numberOfLines={2}>
-          {item.preview}
-        </Text>
-        <Button variant="secondary" style={styles.readMoreButton}>
-          <Text style={styles.readMoreText}>Read More</Text>
-        </Button>
+        <Pressable onPress={() => navigation.navigate("ArticleDetail", { id: item.id })}>
+          <Text style={styles.articleTitle}>{item.title}</Text>
+          <Text style={styles.articleMeta}>
+            {item.category} • {item.readTime}
+          </Text>
+          <Text style={styles.articlePreview} numberOfLines={2}>
+            {item.summary}
+          </Text>
+        </Pressable>
+        <View style={styles.cardActions}>
+          <Button
+            variant="secondary"
+            style={styles.readMoreButton}
+            onPress={() => navigation.navigate("ArticleDetail", { id: item.id })}
+          >
+            <Text style={styles.readMoreText}>Read More</Text>
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            style={styles.shareButton}
+            onPress={() => handleShare(item)}
+          >
+            <Share2 size={18} color="#ec4899" />
+          </Button>
+        </View>
       </CardContent>
     </Card>
   );
@@ -117,53 +126,57 @@ export const Articles = () => {
   return (
     <PageContainer style={styles.container} edges={['top']}>
       <ScreenHeader title="Helpful Articles" showBackButton={false} />
-      <View style={styles.header}>
-        <Text style={styles.subtitle}>Expert guides for your journey.</Text>
+
+      <View style={styles.listHeader}>
+        <View style={styles.searchContainer}>
+          <SearchBar
+            placeholder="Search articles..."
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+          {CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory === cat;
+            return (
+              <Pressable
+                key={cat}
+                onPress={() => setSelectedCategory(cat)}
+                style={[
+                  styles.categoryChip,
+                  isSelected ? styles.categoryChipSelected : styles.categoryChipUnselected
+                ]}
+              >
+                <Text style={[
+                  styles.categoryText,
+                  isSelected ? styles.categoryTextSelected : styles.categoryTextUnselected
+                ]}>
+                  {cat}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      <FlatList
-        data={filteredArticles}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={renderArticle}
-        ListHeaderComponent={
-          <View style={styles.listHeader}>
-            <View style={styles.searchContainer}>
-              <SearchBar
-                placeholder="Search articles..."
-                value={searchQuery}
-                onChange={setSearchQuery}
-              />
-            </View>
-
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-              {CATEGORIES.map((cat) => {
-                const isSelected = selectedCategory === cat;
-                return (
-                  <Pressable
-                    key={cat}
-                    onPress={() => setSelectedCategory(cat)}
-                    style={[
-                      styles.categoryChip,
-                      isSelected ? styles.categoryChipSelected : styles.categoryChipUnselected
-                    ]}
-                  >
-                    <Text style={[
-                      styles.categoryText,
-                      isSelected ? styles.categoryTextSelected : styles.categoryTextUnselected
-                    ]}>
-                      {cat}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-        }
-        contentContainerStyle={styles.listContent}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>No articles found.</Text>
-        }
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ec4899" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredArticles}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderArticle}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>No articles found.</Text>
+          }
+          onRefresh={() => fetchArticles(selectedCategory)}
+          refreshing={isLoading}
+        />
+      )}
     </PageContainer>
   );
 };
@@ -171,25 +184,11 @@ export const Articles = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent', // background
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0f172a', // foreground
-  },
-  subtitle: {
-    color: '#64748b', // muted-foreground
-    fontSize: 12,
+    backgroundColor: 'transparent',
   },
   listHeader: {
     paddingHorizontal: 16,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   searchContainer: {
     marginBottom: 16,
@@ -255,17 +254,32 @@ const styles = StyleSheet.create({
     color: '#64748b',
     marginBottom: 16,
   },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   readMoreButton: {
+    flex: 1,
     height: 40,
   },
   readMoreText: {
     color: '#ec4899', // primary
     fontWeight: 'bold',
   },
+  shareButton: {
+    height: 40,
+    width: 40,
+  },
   emptyText: {
     textAlign: 'center',
     color: '#64748b',
     marginTop: 40,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
-
