@@ -3,25 +3,36 @@ import { View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Pla
 import { useNavigation } from "@react-navigation/native";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Button } from "../components/ui/button";
-import { Baby, Users, ArrowRight, Heart } from "lucide-react-native";
+import { Baby, Users, ArrowRight } from "lucide-react-native";
 import { AnimatedHeart } from "../components/ui/AnimatedHeart";
 import { usePreferences } from "../context/PreferencesContext";
 import { useAuth } from "../context/AuthContext";
 import { authAPI } from "../lib/api/auth";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { PageContainer } from "../components/common/PageContainer";
 
+type Gender = "female" | "male" | "other" | "prefer_not_to_say";
+
 export const Onboarding = () => {
+  const navigation = useNavigation();
   const { mode, setMode, completeOnboarding, updatePreferences } = usePreferences();
   const { checkOnboardingStatus, setIsOnboarded } = useAuth();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [gender, setGender] = useState<Gender | null>(null);
+  const [age, setAge] = useState("");
   const [selectedPurpose, setSelectedPurpose] = useState<"baby" | "community" | null>(mode);
   const [babyName, setBabyName] = useState("");
   const [babyStage, setBabyStage] = useState("newborn");
   const [firstTimeMom, setFirstTimeMom] = useState<"yes" | "no" | null>(null);
   const [focusAreas, setFocusAreas] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const navigation = useNavigation<any>();
+
+  const handleNextFromBasicDetails = () => {
+    if (!gender || !age.trim()) return;
+    const ageNum = parseInt(age, 10);
+    if (isNaN(ageNum) || ageNum < 13 || ageNum > 120) return;
+    updatePreferences({ gender, age: ageNum });
+    setStep(1);
+  };
 
   const handleNextFromPurpose = () => {
     if (!selectedPurpose) return;
@@ -36,16 +47,33 @@ export const Onboarding = () => {
   const handleFinish = async () => {
     setSaving(true);
     try {
-      // 1. Update backend state
-      const onboardingType = selectedPurpose === "baby" ? "EXPECTING" : "GENERAL_HEALTH";
-      await authAPI.completeOnboarding(onboardingType);
+      // Map gender to backend format
+      const genderMap = {
+        female: "FEMALE",
+        male: "MALE", 
+        other: "OTHER",
+        prefer_not_to_say: "PREFER_NOT_TO_SAY"
+      };
 
-      // 2. Refresh AuthContext state (this will trigger App.tsx navigation)
+      // Map onboarding type to backend format
+      const onboardingTypeMap = {
+        pregnancy: "EXPECTING",
+        general_health: "GENERAL_HEALTH"
+      };
+
+      // 1. POST API to save onboarding status with all collected data
+      const onboardingType = selectedPurpose === "baby" ? "pregnancy" : "general_health";
+      await authAPI.completeOnboarding({
+        onboardingType: onboardingTypeMap[onboardingType as keyof typeof onboardingTypeMap],
+        age: parseInt(age, 10),
+        gender: gender ? genderMap[gender] : undefined
+      });
+
+      // 2. Refresh AuthContext state
       setIsOnboarded(true);
-      // Still call backend check as a backup if needed, but the direct set should trigger navigation
       await checkOnboardingStatus();
 
-      // 3. Update local preferences (existing logic)
+      // 3. Update local preferences
       updatePreferences({
         babyName: babyName || undefined,
         babyStage,
@@ -53,10 +81,11 @@ export const Onboarding = () => {
         focusAreas,
       });
       completeOnboarding();
+      
+      // 4. Navigate to community screen
+      navigation.navigate("Community" as never);
     } catch (error) {
       console.error("Failed to complete onboarding:", error);
-      // Fallback: still mark as complete locally if backend fails? 
-      // For now, let's let the user try again.
     } finally {
       setSaving(false);
     }
@@ -93,6 +122,59 @@ export const Onboarding = () => {
               </CardDescription>
             </CardHeader>
             <CardContent style={styles.cardContent}>
+              {step === 0 && (
+                <View style={styles.stepContainer}>
+                  <Text style={styles.stepLabel}>Tell us a bit about yourself.</Text>
+
+                  <View>
+                    <Text style={styles.inputLabel}>Gender</Text>
+                    <View style={styles.genderRow}>
+                      {(["female", "male", "other", "prefer_not_to_say"] as const).map((g) => (
+                        <Pressable
+                          key={g}
+                          onPress={() => setGender(g)}
+                          style={[
+                            styles.genderChip,
+                            gender === g ? styles.stageChipSelected : styles.stageChipUnselected,
+                          ]}
+                        >
+                          <Text style={[
+                            styles.stageText,
+                            gender === g ? styles.stageTextSelected : styles.stageTextUnselected,
+                          ]}>
+                            {g === "female" ? "Female" : g === "male" ? "Male" : g === "other" ? "Other" : "Prefer not to say"}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View>
+                    <Text style={styles.inputLabel}>Age</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your age"
+                      value={age}
+                      onChangeText={setAge}
+                      keyboardType="number-pad"
+                      maxLength={3}
+                    />
+                  </View>
+
+                  <View style={styles.footerRow}>
+                    <Text style={styles.stepCounter}>Step 1 of 3</Text>
+                    <Button
+                      onPress={handleNextFromBasicDetails}
+                      disabled={!gender || !age.trim() || parseInt(age, 10) < 13 || parseInt(age, 10) > 120}
+                      style={styles.nextButton}
+                    >
+                      Continue
+                      <ArrowRight size={16} color="white" style={styles.buttonIcon} />
+                    </Button>
+                  </View>
+                </View>
+              )}
+
               {step === 1 && (
                 <View style={styles.stepContainer}>
                   <Text style={styles.stepLabel}>How do you plan to use Nova?</Text>
@@ -130,15 +212,20 @@ export const Onboarding = () => {
                   </Pressable>
 
                   <View style={styles.footerRow}>
-                    <Text style={styles.stepCounter}>Step 1 of 2</Text>
-                    <Button
-                      onPress={handleNextFromPurpose}
-                      disabled={!selectedPurpose}
-                      style={styles.nextButton}
-                    >
-                      Continue
-                      <ArrowRight size={16} color="white" style={styles.buttonIcon} />
-                    </Button>
+                    <Text style={styles.stepCounter}>Step 2 of 3</Text>
+                    <View style={styles.footerButtons}>
+                      <Button variant="outline" onPress={() => setStep(0)}>
+                        Back
+                      </Button>
+                      <Button
+                        onPress={handleNextFromPurpose}
+                        disabled={!selectedPurpose}
+                        style={styles.nextButton}
+                      >
+                        Continue
+                        <ArrowRight size={16} color="white" style={styles.buttonIcon} />
+                      </Button>
+                    </View>
                   </View>
                 </View>
               )}
@@ -200,12 +287,15 @@ export const Onboarding = () => {
                   </View>
 
                   <View style={styles.footerRow}>
-                    <Button variant="outline" onPress={() => setStep(1)}>
-                      Back
-                    </Button>
-                    <Button onPress={handleFinish} style={styles.nextButton}>
-                      Finish
-                    </Button>
+                    <Text style={styles.stepCounter}>Step 3 of 3</Text>
+                    <View style={styles.footerButtons}>
+                      <Button variant="outline" onPress={() => setStep(1)}>
+                        Back
+                      </Button>
+                      <Button onPress={handleFinish} style={styles.nextButton}>
+                        Finish
+                      </Button>
+                    </View>
                   </View>
                 </View>
               )}
@@ -301,6 +391,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 16,
+  },
+  footerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  genderRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  genderChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    borderWidth: 1,
   },
   stepCounter: {
     fontSize: 12,

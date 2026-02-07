@@ -6,19 +6,20 @@ import { clearAuthStorage } from "../lib/http";
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<{ success: boolean; isOnboarded: boolean; onboardingType: string | null }>;
   register: (data: {
     username: string;
     email: string;
     password: string;
     firstName: string;
     lastName: string;
-  }) => Promise<boolean>;
+  }) => Promise<{ success: boolean; isOnboarded: boolean; onboardingType: string | null }>;
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
   isOnboarded: boolean;
-  checkOnboardingStatus: () => Promise<void>;
+  isCheckingOnboarding: boolean;
+  checkOnboardingStatus: () => Promise<{ isOnboarded: boolean; onboardingType: string | null }>;
   setIsOnboarded: (status: boolean) => void;
 }
 
@@ -40,13 +41,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnboarded, setIsOnboarded] = useState(false);
+  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(false);
 
   const checkOnboardingStatus = async () => {
+    setIsCheckingOnboarding(true);
     try {
       const status = await authAPI.getOnboardingStatus();
       setIsOnboarded(status.isOnboarded);
+      return status;
     } catch (error) {
       console.error("Error fetching onboarding status:", error);
+      return { isOnboarded: false, onboardingType: null };
+    } finally {
+      setIsCheckingOnboarding(false);
     }
   };
 
@@ -72,7 +79,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     checkUser();
   }, []);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<{ success: boolean; isOnboarded: boolean; onboardingType: string | null }> => {
     try {
       const response = await authAPI.login(username, password);
 
@@ -86,8 +93,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       setUser(newUser);
       await AsyncStorage.setItem("user", JSON.stringify(newUser));
-      await checkOnboardingStatus();
-      return true;
+      
+      // Check onboarding status after successful login
+      const onboardingStatus = await checkOnboardingStatus();
+      
+      return { 
+        success: true, 
+        isOnboarded: onboardingStatus.isOnboarded, 
+        onboardingType: onboardingStatus.onboardingType 
+      };
     } catch (error: any) {
       console.error("Login error:", error);
       throw error;
@@ -100,7 +114,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     password: string;
     firstName: string;
     lastName: string;
-  }): Promise<boolean> => {
+  }): Promise<{ success: boolean; isOnboarded: boolean; onboardingType: string | null }> => {
     try {
       const response = await authAPI.register(data);
 
@@ -114,8 +128,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       setUser(newUser);
       await AsyncStorage.setItem("user", JSON.stringify(newUser));
-      await checkOnboardingStatus();
-      return true;
+      
+      // Check onboarding status after successful registration
+      const onboardingStatus = await checkOnboardingStatus();
+      
+      return { 
+        success: true, 
+        isOnboarded: onboardingStatus.isOnboarded, 
+        onboardingType: onboardingStatus.onboardingType 
+      };
     } catch (error: any) {
       console.error("Registration error:", error);
       throw error;
@@ -140,6 +161,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         isAuthenticated: !!user,
         isLoading,
         isOnboarded,
+        isCheckingOnboarding,
         checkOnboardingStatus,
         setIsOnboarded,
       }}

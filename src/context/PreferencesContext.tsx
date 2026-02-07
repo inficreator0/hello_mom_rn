@@ -13,6 +13,8 @@ type UsageMode = "community" | "baby";
 interface Preferences {
   mode: UsageMode;
   onboardingCompleted: boolean;
+  gender?: "female" | "male" | "other" | "prefer_not_to_say";
+  age?: number;
   babyName?: string;
   babyStage?: string;
   firstTimeMom?: "yes" | "no";
@@ -49,6 +51,8 @@ export const PreferencesProvider = ({ children }: PreferencesProviderProps) => {
   const [preferences, setPreferences] = useState<Preferences>({
     mode: "community",
     onboardingCompleted: false,
+    gender: undefined,
+    age: undefined,
     babyName: undefined,
     babyStage: undefined,
     firstTimeMom: undefined,
@@ -103,6 +107,8 @@ export const PreferencesProvider = ({ children }: PreferencesProviderProps) => {
       value={{
         mode: preferences.mode,
         onboardingCompleted: preferences.onboardingCompleted,
+        gender: preferences.gender,
+        age: preferences.age,
         babyName: preferences.babyName,
         babyStage: preferences.babyStage,
         firstTimeMom: preferences.firstTimeMom,

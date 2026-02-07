@@ -6,6 +6,9 @@ A community application backend built with Spring Boot.
 
 - ✅ User Registration and Authentication (JWT-based)
 - ✅ User Login
+- ✅ Password Reset (via email)
+- ✅ Enhanced User Onboarding (age, gender, user type)
+- ✅ Baby Profile Management (CRUD for expecting mothers)
 - ✅ Post Creation, Update, Delete
 - ✅ Get All Posts (with pagination)
 - ✅ Get Posts by User
@@ -23,6 +26,7 @@ A community application backend built with Spring Boot.
 - ✅ Vote Management (change vote, remove vote)
 - ✅ User Profile Management (view, update profile, change password)
 - ✅ User Statistics (posts, comments, votes received, articles)
+- ✅ Saved Posts (Bookmarks)
 - ✅ Menstrual Cycle Tracker
 - ✅ Pregnancy Progress Tracker (Weekly updates, Kick Counter, Contraction Timer)
 - ✅ Health Tracker (Mood, Water, Sleep, Weight, Symptoms)
@@ -361,20 +365,29 @@ Authorization: Bearer <your-jwt-token>
 Content-Type: application/json
 
 {
-  "onboardingType": "pregnancy"
+  "age": 28,
+  "gender": "FEMALE",
+  "onboardingType": "EXPECTING"
 }
 ```
 
-**Onboarding Types:**
-- `pregnancy` - For pregnancy-related community
-- `general_health` - For general health discussions
+**Request Fields:**
+- `age` (optional): Integer, 13-100. User's age.
+- `gender` (optional): String. One of: `MALE`, `FEMALE`, `OTHER`, `PREFER_NOT_TO_SAY`
+- `onboardingType` (required): String. One of:
+  - `EXPECTING` - For expecting mothers
+  - `NEW_MOM` - For new mothers
+  - `EXPERIENCED_MOM` - For experienced mothers
+  - `GENERAL_HEALTH` - For general health and wellness tracking
 
 **Response:**
 ```json
 {
   "message": "Onboarding completed successfully",
   "isOnboarded": true,
-  "onboardingType": "pregnancy"
+  "onboardingType": "EXPECTING",
+  "age": 28,
+  "gender": "FEMALE"
 }
 ```
 
@@ -387,11 +400,103 @@ Authorization: Bearer <your-jwt-token>
 **Response:**
 ```json
 {
+  "message": null,
   "isOnboarded": true,
-  "onboardingType": "pregnancy"
-}
+  "onboardingType": "EXPECTING",
+  "age": 28,
+  "gender": "FEMALE"
 }
 ```
+
+**Note:** All fields may be `null` if the user hasn't completed onboarding yet.
+
+### Baby Profile Management
+
+Once a user completes onboarding with type `EXPECTING`, they can add baby profile(s) with expected due dates and other details.
+
+#### Create a baby profile
+```http
+POST /api/users/me/babies
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "name": "Baby Doe",
+  "expectedDueDate": "2026-08-15",
+  "gender": "UNKNOWN"
+}
+```
+
+**Fields:**
+- `name` (optional): String, 1-100 characters
+- `expectedDueDate` (optional): ISO date format (YYYY-MM-DD)
+- `dateOfBirth` (optional): ISO date format (YYYY-MM-DD)
+- `gender` (optional): `MALE`, `FEMALE`, `UNKNOWN`
+
+**Response:**
+```json
+{
+  "id": 1,
+  "name": "Baby Doe",
+  "expectedDueDate": "2026-08-15",
+  "dateOfBirth": null,
+  "gender": "UNKNOWN",
+  "createdAt": "2026-02-06T23:00:00",
+  "updatedAt": "2026-02-06T23:00:00"
+}
+```
+
+#### Get all baby profiles
+```http
+GET /api/users/me/babies
+Authorization: Bearer <your-jwt-token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "Baby Doe",
+    "expectedDueDate": "2026-08-15",
+    "dateOfBirth": null,
+    "gender": "UNKNOWN",
+    "createdAt": "2026-02-06T23:00:00",
+    "updatedAt": "2026-02-06T23:00:00"
+  }
+]
+```
+
+#### Update a baby profile
+```http
+PUT /api/users/me/babies/{id}
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "name": "Emma",
+  "dateOfBirth": "2026-08-10",
+  "gender": "FEMALE"
+}
+```
+
+**Note:** All fields are optional. Only provided fields will be updated.
+
+**Response:** Updated baby profile
+
+#### Delete a baby profile
+```http
+DELETE /api/users/me/babies/{id}
+Authorization: Bearer <your-jwt-token>
+```
+
+**Response:**
+```json
+{
+  "message": "Baby profile deleted successfully"
+}
+```
+
 
 #### Get user statistics (public)
 ```http

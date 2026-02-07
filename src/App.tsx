@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Home, Activity, FileText, Stethoscope, Users } from 'lucide-react-native';
 import { DefaultTheme, NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
+import { ActivityIndicator, View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
@@ -110,10 +111,20 @@ const MainTabs = () => {
 };
 
 const Navigation = () => {
-  const { isAuthenticated, isLoading, isOnboarded } = useAuth();
+  const { isAuthenticated, isLoading, isOnboarded, isCheckingOnboarding } = useAuth();
 
   if (isLoading) {
     return null; // Or a splash screen
+  }
+
+  // Show loader while checking onboarding status
+  if (isCheckingOnboarding) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
+        <ActivityIndicator color="#ec4899" size="large" />
+        <Text style={{ marginTop: 16, color: '#64748b' }}>Checking your profile...</Text>
+      </View>
+    );
   }
 
   return (

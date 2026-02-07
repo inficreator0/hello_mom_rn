@@ -19,8 +19,8 @@ export const authAPI = {
       body: JSON.stringify(data),
     });
 
-    // Side-effect: store token after successful auth
-    setToken(response.token);
+    // Store token before any subsequent API calls (e.g. onboarding check)
+    await setToken(response.token);
     return response;
   },
 
@@ -36,7 +36,7 @@ export const authAPI = {
       body: JSON.stringify({ username, password }),
     });
 
-    setToken(response.token);
+    await setToken(response.token);
     return response;
   },
 
@@ -65,10 +65,20 @@ export const authAPI = {
     );
   },
 
-  completeOnboarding: async (onboardingType: string) => {
-    return await apiRequest<{ message: string; isOnboarded: boolean }>("/users/me/onboarding", {
+  completeOnboarding: async (data: {
+    onboardingType: string;
+    age?: number;
+    gender?: string;
+  }) => {
+    return await apiRequest<{ 
+      message: string; 
+      isOnboarded: boolean; 
+      onboardingType: string;
+      age?: number;
+      gender?: string;
+    }>("/users/me/onboarding", {
       method: "POST",
-      body: JSON.stringify({ onboardingType }),
+      body: JSON.stringify(data),
     });
   },
 };

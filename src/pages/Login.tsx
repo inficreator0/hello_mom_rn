@@ -20,10 +20,21 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login, register, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, register, isAuthenticated, isLoading: authLoading, isOnboarded, isCheckingOnboarding } = useAuth();
   const navigation = useNavigation<any>();
   const { onboardingCompleted } = usePreferences();
   const { authAPI } = require("../lib/api/auth"); // Inline or import at top
+
+  // Handle navigation after successful login/register and onboarding check
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && !isCheckingOnboarding) {
+      if (isOnboarded) {
+        navigation.navigate("Main" as never);
+      } else {
+        navigation.navigate("Onboarding" as never);
+      }
+    }
+  }, [isAuthenticated, isOnboarded, authLoading, isCheckingOnboarding, navigation]);
 
   const handleSubmit = async () => {
     setError("");
@@ -33,6 +44,7 @@ const Login = () => {
     try {
       if (mode === "login") {
         await login(username, password);
+        // Navigation will be handled by useEffect based on onboarding status
       } else if (mode === "signup") {
         if (!username.trim() || !email.trim() || !password.trim() || !firstName.trim() || !lastName.trim()) {
           setError("Please fill in all fields.");
@@ -46,6 +58,7 @@ const Login = () => {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
         });
+        // Navigation will be handled by useEffect based on onboarding status
       } else if (mode === "forgot") {
         if (!email.trim()) {
           setError("Please enter your email.");
