@@ -66,7 +66,18 @@ export interface PeriodEntry {
   endDate?: string; // ISO date string
   cycleLength?: number; // days
   symptoms?: string[];
+  fertilitySigns?: string[];
+  healthMetrics?: string[];
   notes?: string;
+  flowIntensity?: 'light' | 'medium' | 'heavy' | 'very_heavy';
+  mood?: 'happy' | 'sad' | 'irritable' | 'anxious' | 'neutral';
+  painLevel?: number; // 1-10 scale
+  ovulationDate?: string; // ISO date string
+  basalBodyTemp?: number; // in Fahrenheit
+  cervicalMucus?: 'dry' | 'sticky' | 'creamy' | 'watery' | 'egg_white';
+  intercourseDays?: string[]; // dates for fertility tracking
+  medications?: string[];
+  supplements?: string[];
 }
 
 export interface CycleData {

@@ -1,16 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, Pressable, TextInput, Alert, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput, Alert, StyleSheet, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { ArrowLeft, Plus, Edit2, Trash2, Baby } from "lucide-react-native";
+import { ArrowLeft, Plus, Edit2, Trash2, Baby, TrendingUp, TrendingDown } from "lucide-react-native";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useToast } from "../context/ToastContext";
 import { WeightEntry, WeightData } from "../types";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { weightAPI, WeightLogResponse, WeightAnalytics } from "../lib/api/weight";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 const STORAGE_KEY = "@baby_weight_tracker_data";
 
@@ -21,6 +22,8 @@ export const BabyWeightTracker = () => {
   const navigation = useNavigation();
   const { showToast } = useToast();
   const [weightData, setWeightData] = useState<WeightData>({ entries: [] });
+  const [analytics, setAnalytics] = useState<WeightAnalytics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
   const [formData, setFormData] = useState({
@@ -37,21 +40,55 @@ export const BabyWeightTracker = () => {
 
   const loadData = async () => {
     try {
-      const stored = await AsyncStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setWeightData(JSON.parse(stored));
+      setIsLoading(true);
+      const [weightLogs, analyticsData] = await Promise.all([
+        weightAPI.getWeightHistory(),
+        weightAPI.getWeightAnalytics().catch(() => null) // Analytics might not be implemented yet
+      ]);
+      
+      // Convert API response to local format
+      const entries: WeightEntry[] = weightLogs.map((log: WeightLogResponse) => ({
+        id: log.id.toString(),
+        date: log.date,
+        weight: log.weightKg,
+        notes: log.notes || "",
+      }));
+
+      setWeightData({ entries });
+      if (analyticsData) {
+        setAnalytics(analyticsData);
       }
-    } catch (e) {
-      console.error("Failed to load weight data", e);
+    } catch (error) {
+      console.error("Failed to load weight data", error);
+      showToast("Failed to load weight data", "error");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const saveData = async (data: WeightData) => {
+  const saveEntry = async (entry: WeightEntry, isEdit: boolean) => {
     try {
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      setWeightData(data);
-    } catch (e) {
-      showToast("Failed to save data", "error");
+      const apiData = {
+        date: entry.date,
+        weightKg: entry.weight,
+        notes: entry.notes,
+      };
+
+      if (isEdit && editingEntry) {
+        // Update existing entry
+        await weightAPI.updateWeight(parseInt(entry.id), apiData);
+        showToast("Entry updated", "success");
+      } else {
+        // Create new entry
+        await weightAPI.logWeight(apiData);
+        showToast("Entry added", "success");
+      }
+      
+      // Reload data after save
+      await loadData();
+    } catch (error) {
+      console.error("Failed to save entry", error);
+      showToast("Failed to save entry", "error");
     }
   };
 
@@ -83,12 +120,7 @@ export const BabyWeightTracker = () => {
       notes: formData.notes,
     };
 
-    const updatedEntries = editingEntry
-      ? weightData.entries.map(e => e.id === editingEntry.id ? newEntry : e)
-      : [...weightData.entries, newEntry];
-
-    saveData({ ...weightData, entries: updatedEntries });
-    showToast(editingEntry ? "Entry updated" : "Entry added", "success");
+    saveEntry(newEntry, !!editingEntry);
     setIsDialogOpen(false);
   };
 
@@ -98,10 +130,15 @@ export const BabyWeightTracker = () => {
       {
         text: "Delete",
         style: "destructive",
-        onPress: () => {
-          const updated = weightData.entries.filter(e => e.id !== id);
-          saveData({ ...weightData, entries: updated });
-          showToast("Entry deleted", "success");
+        onPress: async () => {
+          try {
+            await weightAPI.deleteWeight(parseInt(id));
+            showToast("Entry deleted", "success");
+            await loadData();
+          } catch (error) {
+            console.error("Failed to delete entry", error);
+            showToast("Failed to delete entry", "error");
+          }
         }
       }
     ]);
@@ -127,32 +164,89 @@ export const BabyWeightTracker = () => {
         }
       />
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.statsContainer}>
-          <Card style={styles.statsCard}>
-            <CardContent style={styles.statsCardContent}>
-              <Text style={styles.statsLabel}>Current</Text>
-              <Text style={styles.statsValue}>{latestEntry ? `${latestEntry.weight}kg` : '--'}</Text>
-            </CardContent>
-          </Card>
-          <Card style={styles.statsCard}>
-            <CardContent style={styles.statsCardContent}>
-              <Text style={styles.statsLabel}>Gain</Text>
-              <Text style={[
-                styles.statsValue,
-                weightGain && weightGain >= 0 ? styles.positiveText : styles.negativeText
-              ]}>
-                {weightGain !== null ? `${weightGain >= 0 ? '+' : ''}${weightGain.toFixed(2)}kg` : '--'}
-              </Text>
-            </CardContent>
-          </Card>
-          <Card style={styles.statsCard}>
-            <CardContent style={styles.statsCardContent}>
-              <Text style={styles.statsLabel}>Height</Text>
-              <Text style={styles.statsValue}>{latestEntry?.height ? `${latestEntry.height}cm` : '--'}</Text>
-            </CardContent>
-          </Card>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ec4899" />
+          <Text style={styles.loadingText}>Loading weight data...</Text>
         </View>
+      ) : (
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* Analytics Section */}
+          {analytics && (
+            <Animated.View entering={FadeInDown.delay(200).springify()}>
+              <Card style={styles.analyticsCard}>
+                <CardContent style={styles.analyticsContent}>
+                  <View style={styles.analyticsRow}>
+                    <View style={styles.analyticsItem}>
+                      <Text style={styles.analyticsLabel}>Current</Text>
+                      <Text style={styles.analyticsValue}>{analytics.currentWeight}kg</Text>
+                    </View>
+                    <View style={styles.analyticsItem}>
+                      <Text style={styles.analyticsLabel}>Change</Text>
+                      <Text style={[
+                        styles.analyticsValue,
+                        analytics.weightChange >= 0 ? styles.positiveText : styles.negativeText
+                      ]}>
+                        {analytics.weightChange >= 0 ? '+' : ''}{analytics.weightChange.toFixed(2)}kg
+                      </Text>
+                    </View>
+                    <View style={styles.analyticsItem}>
+                      <Text style={styles.analyticsLabel}>Trend</Text>
+                      <View style={styles.trendContainer}>
+                        {analytics.weightTrend === 'increasing' ? (
+                          <TrendingUp size={16} color="#16a34a" />
+                        ) : analytics.weightTrend === 'decreasing' ? (
+                          <TrendingDown size={16} color="#ef4444" />
+                        ) : (
+                          <Text style={styles.trendText}>Stable</Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.analyticsRow}>
+                    <View style={styles.analyticsItem}>
+                      <Text style={styles.analyticsLabel}>Average</Text>
+                      <Text style={styles.analyticsValue}>{analytics.averageWeight}kg</Text>
+                    </View>
+                    <View style={styles.analyticsItem}>
+                      <Text style={styles.analyticsLabel}>Min/Max</Text>
+                      <Text style={styles.analyticsValue}>{analytics.minWeight}-{analytics.maxWeight}kg</Text>
+                    </View>
+                    <View style={styles.analyticsItem}>
+                      <Text style={styles.analyticsLabel}>Entries</Text>
+                      <Text style={styles.analyticsValue}>{analytics.totalEntries}</Text>
+                    </View>
+                  </View>
+                </CardContent>
+              </Card>
+            </Animated.View>
+          )}
+
+          <View style={styles.statsContainer}>
+            <Card style={styles.statsCard}>
+              <CardContent style={styles.statsCardContent}>
+                <Text style={styles.statsLabel}>Current</Text>
+                <Text style={styles.statsValue}>{latestEntry ? `${latestEntry.weight}kg` : '--'}</Text>
+              </CardContent>
+            </Card>
+            <Card style={styles.statsCard}>
+              <CardContent style={styles.statsCardContent}>
+                <Text style={styles.statsLabel}>Gain</Text>
+                <Text style={[
+                  styles.statsValue,
+                  weightGain && weightGain >= 0 ? styles.positiveText : styles.negativeText
+                ]}>
+                  {weightGain !== null ? `${weightGain >= 0 ? '+' : ''}${weightGain.toFixed(2)}kg` : '--'}
+                </Text>
+              </CardContent>
+            </Card>
+            <Card style={styles.statsCard}>
+              <CardContent style={styles.statsCardContent}>
+                <Text style={styles.statsLabel}>Height</Text>
+                <Text style={styles.statsValue}>{latestEntry?.height ? `${latestEntry.height}cm` : '--'}</Text>
+              </CardContent>
+            </Card>
+          </View>
 
         <Text style={styles.sectionTitle}>Growth History</Text>
         <View style={styles.historyContainer}>
@@ -271,6 +365,56 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent', // background
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#64748b',
+    fontSize: 16,
+  },
+  // Analytics styles
+  analyticsCard: {
+    marginBottom: 24,
+  },
+  analyticsContent: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+  analyticsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  analyticsItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  analyticsLabel: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  analyticsValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#0f172a',
+  },
+  trendContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trendText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: 'bold',
   },
   header: {
     flexDirection: 'row',
