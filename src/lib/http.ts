@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuthStore } from "../store/authStore";
 
 const API_BASE_URL = "https://hellomom-api.ddns.net/api";
 
@@ -41,8 +42,7 @@ export const apiRequest = async <T>(
   if (!response.ok) {
     // If the token is invalid/expired, clear local session
     if (response.status === 401 || response.status === 403) {
-      await clearAuthStorage();
-      // Navigation will be handled by the app's auth state
+      await useAuthStore.getState().logout();
     }
 
     const errorData = await response.json().catch(() => ({}));

@@ -45,7 +45,7 @@ export const BabyWeightTracker = () => {
         weightAPI.getWeightHistory(),
         weightAPI.getWeightAnalytics().catch(() => null) // Analytics might not be implemented yet
       ]);
-      
+
       // Convert API response to local format
       const entries: WeightEntry[] = weightLogs.map((log: WeightLogResponse) => ({
         id: log.id.toString(),
@@ -83,7 +83,7 @@ export const BabyWeightTracker = () => {
         await weightAPI.logWeight(apiData);
         showToast("Entry added", "success");
       }
-      
+
       // Reload data after save
       await loadData();
     } catch (error) {
@@ -170,193 +170,195 @@ export const BabyWeightTracker = () => {
           <Text style={styles.loadingText}>Loading weight data...</Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-          {/* Analytics Section */}
-          {analytics && (
-            <Animated.View entering={FadeInDown.delay(200).springify()}>
-              <Card style={styles.analyticsCard}>
-                <CardContent style={styles.analyticsContent}>
-                  <View style={styles.analyticsRow}>
-                    <View style={styles.analyticsItem}>
-                      <Text style={styles.analyticsLabel}>Current</Text>
-                      <Text style={styles.analyticsValue}>{analytics.currentWeight}kg</Text>
-                    </View>
-                    <View style={styles.analyticsItem}>
-                      <Text style={styles.analyticsLabel}>Change</Text>
-                      <Text style={[
-                        styles.analyticsValue,
-                        analytics.weightChange >= 0 ? styles.positiveText : styles.negativeText
-                      ]}>
-                        {analytics.weightChange >= 0 ? '+' : ''}{analytics.weightChange.toFixed(2)}kg
-                      </Text>
-                    </View>
-                    <View style={styles.analyticsItem}>
-                      <Text style={styles.analyticsLabel}>Trend</Text>
-                      <View style={styles.trendContainer}>
-                        {analytics.weightTrend === 'increasing' ? (
-                          <TrendingUp size={16} color="#16a34a" />
-                        ) : analytics.weightTrend === 'decreasing' ? (
-                          <TrendingDown size={16} color="#ef4444" />
-                        ) : (
-                          <Text style={styles.trendText}>Stable</Text>
-                        )}
+        <>
+          <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            {/* Analytics Section */}
+            {analytics && (
+              <Animated.View entering={FadeInDown.delay(200).springify()}>
+                <Card style={styles.analyticsCard}>
+                  <CardContent style={styles.analyticsContent}>
+                    <View style={styles.analyticsRow}>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsLabel}>Current</Text>
+                        <Text style={styles.analyticsValue}>{analytics.currentWeight}kg</Text>
                       </View>
-                    </View>
-                  </View>
-                  <View style={styles.analyticsRow}>
-                    <View style={styles.analyticsItem}>
-                      <Text style={styles.analyticsLabel}>Average</Text>
-                      <Text style={styles.analyticsValue}>{analytics.averageWeight}kg</Text>
-                    </View>
-                    <View style={styles.analyticsItem}>
-                      <Text style={styles.analyticsLabel}>Min/Max</Text>
-                      <Text style={styles.analyticsValue}>{analytics.minWeight}-{analytics.maxWeight}kg</Text>
-                    </View>
-                    <View style={styles.analyticsItem}>
-                      <Text style={styles.analyticsLabel}>Entries</Text>
-                      <Text style={styles.analyticsValue}>{analytics.totalEntries}</Text>
-                    </View>
-                  </View>
-                </CardContent>
-              </Card>
-            </Animated.View>
-          )}
-
-          <View style={styles.statsContainer}>
-            <Card style={styles.statsCard}>
-              <CardContent style={styles.statsCardContent}>
-                <Text style={styles.statsLabel}>Current</Text>
-                <Text style={styles.statsValue}>{latestEntry ? `${latestEntry.weight}kg` : '--'}</Text>
-              </CardContent>
-            </Card>
-            <Card style={styles.statsCard}>
-              <CardContent style={styles.statsCardContent}>
-                <Text style={styles.statsLabel}>Gain</Text>
-                <Text style={[
-                  styles.statsValue,
-                  weightGain && weightGain >= 0 ? styles.positiveText : styles.negativeText
-                ]}>
-                  {weightGain !== null ? `${weightGain >= 0 ? '+' : ''}${weightGain.toFixed(2)}kg` : '--'}
-                </Text>
-              </CardContent>
-            </Card>
-            <Card style={styles.statsCard}>
-              <CardContent style={styles.statsCardContent}>
-                <Text style={styles.statsLabel}>Height</Text>
-                <Text style={styles.statsValue}>{latestEntry?.height ? `${latestEntry.height}cm` : '--'}</Text>
-              </CardContent>
-            </Card>
-          </View>
-
-        <Text style={styles.sectionTitle}>Growth History</Text>
-        <View style={styles.historyContainer}>
-          {sortedEntries.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Baby size={48} color="#64748b" style={styles.emptyIcon} />
-              <Text style={styles.emptyText}>No entries yet</Text>
-            </View>
-          ) : (
-            sortedEntries.map((entry, idx) => {
-              const prev = sortedEntries[idx + 1];
-              const gain = prev ? entry.weight - prev.weight : null;
-              return (
-                <Card key={entry.id}>
-                  <CardContent style={styles.historyCardContent}>
-                    <View style={styles.flex1}>
-                      <Text style={styles.entryDate}>
-                        {parseDate(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </Text>
-                      <View style={styles.entryMetrics}>
-                        <View style={styles.metricItem}>
-                          <Text style={styles.metricLabel}>W:</Text>
-                          <Text style={styles.metricValue}>{entry.weight}kg</Text>
-                          {gain !== null && (
-                            <Text style={[
-                              styles.gainText,
-                              gain >= 0 ? styles.positiveText : styles.negativeText
-                            ]}>
-                              ({gain >= 0 ? '+' : ''}{gain.toFixed(2)})
-                            </Text>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsLabel}>Change</Text>
+                        <Text style={[
+                          styles.analyticsValue,
+                          analytics.weightChange >= 0 ? styles.positiveText : styles.negativeText
+                        ]}>
+                          {analytics.weightChange >= 0 ? '+' : ''}{analytics.weightChange.toFixed(2)}kg
+                        </Text>
+                      </View>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsLabel}>Trend</Text>
+                        <View style={styles.trendContainer}>
+                          {analytics.weightTrend === 'increasing' ? (
+                            <TrendingUp size={16} color="#16a34a" />
+                          ) : analytics.weightTrend === 'decreasing' ? (
+                            <TrendingDown size={16} color="#ef4444" />
+                          ) : (
+                            <Text style={styles.trendText}>Stable</Text>
                           )}
                         </View>
-                        {entry.height && (
-                          <View style={styles.metricItem}>
-                            <Text style={styles.metricLabel}>H:</Text>
-                            <Text style={styles.metricValue}>{entry.height}cm</Text>
-                          </View>
-                        )}
                       </View>
                     </View>
-                    <View style={styles.entryActions}>
-                      <Pressable onPress={() => { setEditingEntry(entry); setFormData({ ...entry, weight: entry.weight.toString(), height: entry.height?.toString() || "", headCircumference: entry.headCircumference?.toString() || "", notes: entry.notes || "" }); setIsDialogOpen(true); }}>
-                        <Edit2 size={18} color="#64748b" />
-                      </Pressable>
-                      <Pressable onPress={() => handleDelete(entry.id)}>
-                        <Trash2 size={18} color="rgba(239, 68, 68, 0.7)" />
-                      </Pressable>
+                    <View style={styles.analyticsRow}>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsLabel}>Average</Text>
+                        <Text style={styles.analyticsValue}>{analytics.averageWeight}kg</Text>
+                      </View>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsLabel}>Min/Max</Text>
+                        <Text style={styles.analyticsValue}>{analytics.minWeight}-{analytics.maxWeight}kg</Text>
+                      </View>
+                      <View style={styles.analyticsItem}>
+                        <Text style={styles.analyticsLabel}>Entries</Text>
+                        <Text style={styles.analyticsValue}>{analytics.totalEntries}</Text>
+                      </View>
                     </View>
                   </CardContent>
                 </Card>
-              );
-            })
-          )}
-        </View>
-      </ScrollView>
+              </Animated.View>
+            )}
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent onOpenChange={setIsDialogOpen}>
-          <DialogHeader>
-            <DialogTitle>{editingEntry ? "Edit Entry" : "Add Entry"}</DialogTitle>
-            <DialogDescription>Record baby's measurements.</DialogDescription>
-          </DialogHeader>
-          <View style={styles.dialogForm}>
-            <View>
-              <Text style={styles.inputLabel}>Date (YYYY-MM-DD)</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.date}
-                onChangeText={(t) => setFormData({ ...formData, date: t })}
-                placeholder="2024-05-20"
-              />
+            <View style={styles.statsContainer}>
+              <Card style={styles.statsCard}>
+                <CardContent style={styles.statsCardContent}>
+                  <Text style={styles.statsLabel}>Current</Text>
+                  <Text style={styles.statsValue}>{latestEntry ? `${latestEntry.weight}kg` : '--'}</Text>
+                </CardContent>
+              </Card>
+              <Card style={styles.statsCard}>
+                <CardContent style={styles.statsCardContent}>
+                  <Text style={styles.statsLabel}>Gain</Text>
+                  <Text style={[
+                    styles.statsValue,
+                    weightGain && weightGain >= 0 ? styles.positiveText : styles.negativeText
+                  ]}>
+                    {weightGain !== null ? `${weightGain >= 0 ? '+' : ''}${weightGain.toFixed(2)}kg` : '--'}
+                  </Text>
+                </CardContent>
+              </Card>
+              <Card style={styles.statsCard}>
+                <CardContent style={styles.statsCardContent}>
+                  <Text style={styles.statsLabel}>Height</Text>
+                  <Text style={styles.statsValue}>{latestEntry?.height ? `${latestEntry.height}cm` : '--'}</Text>
+                </CardContent>
+              </Card>
             </View>
-            <View style={styles.inputRow}>
-              <View style={styles.flex1}>
-                <Text style={styles.inputLabel}>Weight (kg)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.weight}
-                  keyboardType="numeric"
-                  onChangeText={(t) => setFormData({ ...formData, weight: t })}
-                  placeholder="3.5"
-                />
+
+            <Text style={styles.sectionTitle}>Growth History</Text>
+            <View style={styles.historyContainer}>
+              {sortedEntries.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Baby size={48} color="#64748b" style={styles.emptyIcon} />
+                  <Text style={styles.emptyText}>No entries yet</Text>
+                </View>
+              ) : (
+                sortedEntries.map((entry, idx) => {
+                  const prev = sortedEntries[idx + 1];
+                  const gain = prev ? entry.weight - prev.weight : null;
+                  return (
+                    <Card key={entry.id}>
+                      <CardContent style={styles.historyCardContent}>
+                        <View style={styles.flex1}>
+                          <Text style={styles.entryDate}>
+                            {parseDate(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </Text>
+                          <View style={styles.entryMetrics}>
+                            <View style={styles.metricItem}>
+                              <Text style={styles.metricLabel}>W:</Text>
+                              <Text style={styles.metricValue}>{entry.weight}kg</Text>
+                              {gain !== null && (
+                                <Text style={[
+                                  styles.gainText,
+                                  gain >= 0 ? styles.positiveText : styles.negativeText
+                                ]}>
+                                  ({gain >= 0 ? '+' : ''}{gain.toFixed(2)})
+                                </Text>
+                              )}
+                            </View>
+                            {entry.height && (
+                              <View style={styles.metricItem}>
+                                <Text style={styles.metricLabel}>H:</Text>
+                                <Text style={styles.metricValue}>{entry.height}cm</Text>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                        <View style={styles.entryActions}>
+                          <Pressable onPress={() => { setEditingEntry(entry); setFormData({ ...entry, weight: entry.weight.toString(), height: entry.height?.toString() || "", headCircumference: entry.headCircumference?.toString() || "", notes: entry.notes || "" }); setIsDialogOpen(true); }}>
+                            <Edit2 size={18} color="#64748b" />
+                          </Pressable>
+                          <Pressable onPress={() => handleDelete(entry.id)}>
+                            <Trash2 size={18} color="rgba(239, 68, 68, 0.7)" />
+                          </Pressable>
+                        </View>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </View>
+          </ScrollView>
+
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogContent onOpenChange={setIsDialogOpen}>
+              <DialogHeader>
+                <DialogTitle>{editingEntry ? "Edit Entry" : "Add Entry"}</DialogTitle>
+                <DialogDescription>Record baby's measurements.</DialogDescription>
+              </DialogHeader>
+              <View style={styles.dialogForm}>
+                <View>
+                  <Text style={styles.inputLabel}>Date (YYYY-MM-DD)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.date}
+                    onChangeText={(t) => setFormData({ ...formData, date: t })}
+                    placeholder="2024-05-20"
+                  />
+                </View>
+                <View style={styles.inputRow}>
+                  <View style={styles.flex1}>
+                    <Text style={styles.inputLabel}>Weight (kg)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.weight}
+                      keyboardType="numeric"
+                      onChangeText={(t) => setFormData({ ...formData, weight: t })}
+                      placeholder="3.5"
+                    />
+                  </View>
+                  <View style={styles.flex1}>
+                    <Text style={styles.inputLabel}>Height (cm)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={formData.height}
+                      keyboardType="numeric"
+                      onChangeText={(t) => setFormData({ ...formData, height: t })}
+                      placeholder="50"
+                    />
+                  </View>
+                </View>
+                <View>
+                  <Text style={styles.inputLabel}>Head Circ. (cm)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.headCircumference}
+                    keyboardType="numeric"
+                    onChangeText={(t) => setFormData({ ...formData, headCircumference: t })}
+                    placeholder="35"
+                  />
+                </View>
+                <Button style={styles.submitButton} onPress={handleSubmit}>
+                  Save Entry
+                </Button>
               </View>
-              <View style={styles.flex1}>
-                <Text style={styles.inputLabel}>Height (cm)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={formData.height}
-                  keyboardType="numeric"
-                  onChangeText={(t) => setFormData({ ...formData, height: t })}
-                  placeholder="50"
-                />
-              </View>
-            </View>
-            <View>
-              <Text style={styles.inputLabel}>Head Circ. (cm)</Text>
-              <TextInput
-                style={styles.input}
-                value={formData.headCircumference}
-                keyboardType="numeric"
-                onChangeText={(t) => setFormData({ ...formData, headCircumference: t })}
-                placeholder="35"
-              />
-            </View>
-            <Button style={styles.submitButton} onPress={handleSubmit}>
-              Save Entry
-            </Button>
-          </View>
-        </DialogContent>
-      </Dialog>
+            </DialogContent>
+          </Dialog>
+        </>)}
     </PageContainer>
   );
 };

@@ -7,6 +7,7 @@ import {
   useCallback,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { authAPI } from "../lib/api/auth";
 
 type UsageMode = "community" | "baby";
 
@@ -90,9 +91,36 @@ export const PreferencesProvider = ({ children }: PreferencesProviderProps) => {
     savePreferences();
   }, [preferences]);
 
-  const setMode = useCallback((mode: UsageMode) => {
+  const setMode = useCallback(async (mode: UsageMode) => {
+    // Optimistically update local state
     setPreferences((prev) => ({ ...prev, mode }));
-  }, []);
+
+    try {
+      // Map gender to backend format
+      const genderMap = {
+        female: "FEMALE",
+        male: "MALE",
+        other: "OTHER",
+        prefer_not_to_say: "PREFER_NOT_TO_SAY"
+      };
+
+      // Map onboarding type to backend format
+      const onboardingTypeMap = {
+        baby: "EXPECTING",
+        community: "GENERAL_HEALTH"
+      };
+
+      await authAPI.completeOnboarding({
+        onboardingType: onboardingTypeMap[mode],
+        age: preferences.age,
+        gender: preferences.gender ? genderMap[preferences.gender] : undefined
+      });
+    } catch (error) {
+      console.error("Failed to sync mode with backend:", error);
+      // Optional: revert local state if API fails
+      // setPreferences((prev) => ({ ...prev, mode: mode === "baby" ? "community" : "baby" }));
+    }
+  }, [preferences.age, preferences.gender]);
 
   const completeOnboarding = useCallback(() => {
     setPreferences((prev) => ({ ...prev, onboardingCompleted: true }));

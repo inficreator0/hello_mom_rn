@@ -50,7 +50,7 @@ export const Onboarding = () => {
       // Map gender to backend format
       const genderMap = {
         female: "FEMALE",
-        male: "MALE", 
+        male: "MALE",
         other: "OTHER",
         prefer_not_to_say: "PREFER_NOT_TO_SAY"
       };
@@ -81,7 +81,7 @@ export const Onboarding = () => {
         focusAreas,
       });
       completeOnboarding();
-      
+
       // 4. Navigate to community screen
       navigation.navigate("Community" as never);
     } catch (error) {
@@ -162,7 +162,7 @@ export const Onboarding = () => {
                   </View>
 
                   <View style={styles.footerRow}>
-                    <Text style={styles.stepCounter}>Step 1 of 3</Text>
+                    {/* <Text style={styles.stepCounter}>Step 1 of 3</Text> */}
                     <Button
                       onPress={handleNextFromBasicDetails}
                       disabled={!gender || !age.trim() || parseInt(age, 10) < 13 || parseInt(age, 10) > 120}
@@ -190,8 +190,8 @@ export const Onboarding = () => {
                       <Baby size={24} color="#ec4899" />
                     </View>
                     <View style={styles.flex1}>
-                      <Text style={styles.optionTitle}>For my baby</Text>
-                      <Text style={styles.optionDescription}>Feeding, sleep, and growth tracking.</Text>
+                      <Text style={styles.optionTitle}>My Baby & Me</Text>
+                      <Text style={styles.optionDescription}>For pregnancy, baby care, motherhood journey</Text>
                     </View>
                   </Pressable>
 
@@ -206,13 +206,13 @@ export const Onboarding = () => {
                       <Users size={24} color="#ec4899" />
                     </View>
                     <View style={styles.flex1}>
-                      <Text style={styles.optionTitle}>Community only</Text>
-                      <Text style={styles.optionDescription}>Join discussions and get support.</Text>
+                      <Text style={styles.optionTitle}>My Wellness</Text>
+                      <Text style={styles.optionDescription}>For general health,trackers and community</Text>
                     </View>
                   </Pressable>
 
                   <View style={styles.footerRow}>
-                    <Text style={styles.stepCounter}>Step 2 of 3</Text>
+                    {/* <Text style={styles.stepCounter}>Step 2 of 3</Text> */}
                     <View style={styles.footerButtons}>
                       <Button variant="outline" onPress={() => setStep(0)}>
                         Back
@@ -287,7 +287,7 @@ export const Onboarding = () => {
                   </View>
 
                   <View style={styles.footerRow}>
-                    <Text style={styles.stepCounter}>Step 3 of 3</Text>
+                    {/* <Text style={styles.stepCounter}>Step 3 of 3</Text> */}
                     <View style={styles.footerButtons}>
                       <Button variant="outline" onPress={() => setStep(1)}>
                         Back

@@ -1,8 +1,8 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User } from "../types";
 import { authAPI } from "../lib/api/auth";
-import { clearAuthStorage } from "../lib/http";
+import { useAuthStore } from "../store/authStore";
 
 interface AuthContextType {
   user: User | null;
@@ -38,10 +38,18 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isOnboarded, setIsOnboarded] = useState(false);
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(false);
+  const {
+    user,
+    setUser,
+    isAuthenticated,
+    isLoading,
+    setIsLoading,
+    isOnboarded,
+    setIsOnboarded,
+    isCheckingOnboarding,
+    setIsCheckingOnboarding,
+    logout: storeLogout
+  } = useAuthStore();
 
   const checkOnboardingStatus = async () => {
     setIsCheckingOnboarding(true);
@@ -93,14 +101,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       setUser(newUser);
       await AsyncStorage.setItem("user", JSON.stringify(newUser));
-      
+
       // Check onboarding status after successful login
       const onboardingStatus = await checkOnboardingStatus();
-      
-      return { 
-        success: true, 
-        isOnboarded: onboardingStatus.isOnboarded, 
-        onboardingType: onboardingStatus.onboardingType 
+
+      return {
+        success: true,
+        isOnboarded: onboardingStatus.isOnboarded,
+        onboardingType: onboardingStatus.onboardingType
       };
     } catch (error: any) {
       console.error("Login error:", error);
@@ -128,14 +136,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       setUser(newUser);
       await AsyncStorage.setItem("user", JSON.stringify(newUser));
-      
+
       // Check onboarding status after successful registration
       const onboardingStatus = await checkOnboardingStatus();
-      
-      return { 
-        success: true, 
-        isOnboarded: onboardingStatus.isOnboarded, 
-        onboardingType: onboardingStatus.onboardingType 
+
+      return {
+        success: true,
+        isOnboarded: onboardingStatus.isOnboarded,
+        onboardingType: onboardingStatus.onboardingType
       };
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -144,11 +152,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = async () => {
-    setUser(null);
-    setIsOnboarded(false);
-    clearAuthStorage();
-    await AsyncStorage.removeItem("user");
-    await AsyncStorage.removeItem("token");
+    await storeLogout();
   };
 
   return (
@@ -158,7 +162,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         login,
         register,
         logout,
-        isAuthenticated: !!user,
+        isAuthenticated,
         isLoading,
         isOnboarded,
         isCheckingOnboarding,

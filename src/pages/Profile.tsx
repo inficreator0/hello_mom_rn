@@ -225,71 +225,97 @@ const Profile = () => {
     );
   };
 
+  const fetchMyPosts = async () => {
+    setIsLoading(true);
+    try {
+      const myPostsResponse = await postsAPI.getMyPosts(0, 20);
+      const mappedPosts = myPostsResponse.content.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        author: p.authorUsername,
+        authorId: p.authorId,
+        authorUsername: p.authorUsername,
+        category: p.category || "General",
+        flair: p.flair,
+        votes: (p.upvotes || 0) - (p.downvotes || 0),
+        userVote: (p.currentUserVote === "UPVOTE" ? "up" : p.currentUserVote === "DOWNVOTE" ? "down" : null) as "up" | "down" | null,
+        bookmarked: p.saved || false,
+        createdAt: new Date(p.createdAt),
+        updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
+        comments: [],
+        commentCount: p.commentCount || 0,
+      }));
+      setMyPosts(mappedPosts);
+    } catch (error) {
+      console.error("Error fetching my posts:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchSavedPosts = async () => {
+    setIsLoading(true);
+    try {
+      const savedPostsResponse = await postsAPI.getSavedPosts(0, 20);
+      const mappedSavedPosts = savedPostsResponse.content.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        content: p.content,
+        author: p.authorUsername,
+        authorId: p.authorId,
+        authorUsername: p.authorUsername,
+        category: p.category || "General",
+        flair: p.flair,
+        votes: (p.upvotes || 0) - (p.downvotes || 0),
+        userVote: (p.currentUserVote === "UPVOTE" ? "up" : p.currentUserVote === "DOWNVOTE" ? "down" : null) as "up" | "down" | null,
+        bookmarked: true,
+        createdAt: new Date(p.createdAt),
+        updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
+        comments: [],
+        commentCount: p.commentCount || 0,
+      }));
+      setBookmarks(mappedSavedPosts);
+
+      setStats(prev => ({
+        ...prev,
+        savedCount: savedPostsResponse.totalElements,
+      }));
+    } catch (error) {
+      console.error("Error fetching saved posts:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    if (!authUser?.username) return;
+    try {
+      const statsResponse = await postsAPI.getUserStats(authUser.username);
+      setStats(prev => ({
+        ...prev,
+        postsCount: statsResponse.postsCount,
+        commentsCount: statsResponse.commentsCount,
+        totalUpvotesReceived: statsResponse.totalUpvotesReceived,
+      }));
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchProfileData = async () => {
-      setIsLoading(true);
-      try {
-        const myPostsResponse = await postsAPI.getMyPosts(0, 20);
-        const mappedPosts = myPostsResponse.content.map((p: any) => {
-          if (p.currentUserVote) console.log(`[Profile] Post ${p.id} vote:`, p.currentUserVote);
-          return {
-            id: p.id,
-            title: p.title,
-            content: p.content,
-            author: p.authorUsername,
-            authorId: p.authorId,
-            authorUsername: p.authorUsername,
-            category: p.category || "General",
-            flair: p.flair,
-            votes: (p.upvotes || 0) - (p.downvotes || 0),
-            userVote: (p.currentUserVote === "UPVOTE" ? "up" : p.currentUserVote === "DOWNVOTE" ? "down" : null) as "up" | "down" | null,
-            bookmarked: p.saved || false,
-            createdAt: new Date(p.createdAt),
-            updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
-            comments: [],
-            commentCount: p.commentCount || 0,
-          }
-        });
-        setMyPosts(mappedPosts);
-
-        const savedPostsResponse = await postsAPI.getSavedPosts(0, 20);
-        const mappedSavedPosts = savedPostsResponse.content.map((p: any) => ({
-          id: p.id,
-          title: p.title,
-          content: p.content,
-          author: p.authorUsername,
-          authorId: p.authorId,
-          authorUsername: p.authorUsername,
-          category: p.category || "General",
-          flair: p.flair,
-          votes: (p.upvotes || 0) - (p.downvotes || 0),
-          userVote: (p.currentUserVote === "UPVOTE" ? "up" : p.currentUserVote === "DOWNVOTE" ? "down" : null) as "up" | "down" | null,
-          bookmarked: true,
-          createdAt: new Date(p.createdAt),
-          updatedAt: p.updatedAt ? new Date(p.updatedAt) : undefined,
-          comments: [],
-          commentCount: p.commentCount || 0,
-        }));
-        setBookmarks(mappedSavedPosts);
-
-        if (authUser?.username) {
-          const statsResponse = await postsAPI.getUserStats(authUser.username);
-          setStats({
-            postsCount: statsResponse.postsCount,
-            commentsCount: statsResponse.commentsCount,
-            totalUpvotesReceived: statsResponse.totalUpvotesReceived,
-            savedCount: savedPostsResponse.totalElements,
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching profile data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfileData();
+    if (authUser?.username) {
+      fetchStats();
+    }
   }, [authUser?.username]);
+
+  useEffect(() => {
+    if (activeTab === "my-posts") {
+      fetchMyPosts();
+    } else {
+      fetchSavedPosts();
+    }
+  }, [activeTab, authUser?.username]);
 
   const formatDate = (date: Date | string) => {
     const dateObj = typeof date === "string" ? new Date(date) : date;
@@ -329,7 +355,7 @@ const Profile = () => {
           </Button>
         </View>
 
-        {/* Bio */}
+        {/* Bio
         <Card style={styles.bioCard}>
           <CardContent style={styles.bioCardContent}>
             <View style={styles.bioHeader}>
@@ -357,7 +383,7 @@ const Profile = () => {
               </Text>
             )}
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Mode Settings */}
         <Card style={styles.settingsCard}>
@@ -484,15 +510,6 @@ const Profile = () => {
   );
 };
 
-const StatCard = ({ label, value }: { label: string; value: number }) => (
-  <Card style={styles.statCard}>
-    <CardContent style={styles.statCardContent}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </CardContent>
-  </Card>
-);
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -592,10 +609,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   settingsCard: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   settingsCardContent: {
-    paddingTop: 24,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   settingsHeader: {
     flexDirection: 'row',
@@ -611,7 +629,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   settingsDescription: {
-    fontSize: 14,
+    fontSize: 12,
+    width: '70%',
     color: '#64748b',
     marginBottom: 16,
   },
@@ -623,10 +642,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 4,
   },
   toggleLabel: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#0f172a',
     fontWeight: '500',
   },
@@ -634,8 +652,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   babyProfileCard: {
-    marginBottom: 24,
-    backgroundColor: 'rgba(255, 107, 107, 0.05)', // primary/5
+    marginBottom: 16,
     borderColor: 'rgba(255, 107, 107, 0.2)', // primary/20
   },
   babyProfileContent: {
@@ -686,24 +703,6 @@ const styles = StyleSheet.create({
   },
   tabsContent: {
     marginTop: 0,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: '45%',
-  },
-  statCardContent: {
-    paddingTop: 24,
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#64748b',
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0f172a',
   },
   loadingIndicator: {
     paddingVertical: 40,
