@@ -23,6 +23,8 @@
         "foregroundImage": "./public/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "useNextNotificationsApi": true,
+      "googleServicesFile": "./google-services.json",
       "package": "com.nova",
       "intentFilters": [
         {
@@ -51,6 +53,10 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
-    "updates": {}
+    "updates": {},
+    "plugins": [
+      "expo-updates",
+      "expo-notifications"
+    ]
   }
 }

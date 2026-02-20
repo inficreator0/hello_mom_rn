@@ -74,7 +74,7 @@ export const Consultations = () => {
 
   return (
     <PageContainer style={styles.container} edges={['top']}>
-      <ScreenHeader title="Consult Experts" showBackButton={false} />
+      <ScreenHeader title="Consult Experts" showBackButton={false} showMenuButton={true} />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
 

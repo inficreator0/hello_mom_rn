@@ -178,6 +178,7 @@ export const Onboarding = () => {
               {step === 1 && (
                 <View style={styles.stepContainer}>
                   <Text style={styles.stepLabel}>How do you plan to use Nova?</Text>
+                  <Text style={styles.noteText}>You can change this anytime from your profile.</Text>
 
                   <Pressable
                     onPress={() => setSelectedPurpose("baby")}
@@ -355,6 +356,13 @@ const styles = StyleSheet.create({
   stepLabel: {
     fontSize: 14,
     color: '#64748b', // muted-foreground
+  },
+  noteText: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: -8,
+    marginBottom: 8,
+    fontStyle: 'italic',
   },
   purposeOption: {
     padding: 16,

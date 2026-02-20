@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "131027035915",
+    "project_id": "nova-staging-app",
+    "storage_bucket": "nova-staging-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:131027035915:android:8f27c72bbdd5d258f2e40e",
+        "android_client_info": {
+          "package_name": "com.nova"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-tSUGoHpWIBIm0Rkh0hmhVC6EJwVeXyM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

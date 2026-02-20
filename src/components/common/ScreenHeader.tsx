@@ -1,22 +1,28 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Bell, Menu } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useNotifications } from '../../context/NotificationContext';
 
 interface ScreenHeaderProps {
     title: string;
     onBack?: () => void;
     rightElement?: React.ReactNode;
     showBackButton?: boolean;
+    showNotificationBell?: boolean;
+    showMenuButton?: boolean;
 }
 
 export const ScreenHeader = ({
     title,
     onBack,
     rightElement,
-    showBackButton = true
+    showBackButton = true,
+    showNotificationBell = true,
+    showMenuButton = false
 }: ScreenHeaderProps) => {
-    const navigation = useNavigation();
+    const navigation = useNavigation<any>();
+    const { unreadCount } = useNotifications();
 
     const handleBack = () => {
         if (onBack) {
@@ -36,6 +42,11 @@ export const ScreenHeader = ({
                         <ArrowLeft size={24} color="#ffffff" />
                     </Pressable>
                 )}
+                {showMenuButton && (
+                    <Pressable onPress={() => navigation.toggleDrawer()} style={styles.menuButton}>
+                        <Menu size={24} color="#ffffff" />
+                    </Pressable>
+                )}
             </View>
 
             <View style={styles.titleContainer}>
@@ -43,7 +54,19 @@ export const ScreenHeader = ({
             </View>
 
             <View style={styles.rightSection}>
-                {rightElement}
+                {rightElement || (showNotificationBell && (
+                    <Pressable
+                        onPress={() => navigation.navigate("NotificationInbox")}
+                        style={styles.notifButton}
+                    >
+                        <Bell size={24} color="#ffffff" />
+                        {unreadCount > 0 && (
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                            </View>
+                        )}
+                    </Pressable>
+                ))}
             </View>
         </View>
     );
@@ -80,6 +103,11 @@ const styles = StyleSheet.create({
         padding: 8,
         marginRight: 8,
     },
+    menuButton: {
+        marginLeft: -8,
+        padding: 8,
+        marginRight: 8,
+    },
     titleContainer: {
         flex: 1,
         alignItems: 'flex-start',
@@ -89,5 +117,27 @@ const styles = StyleSheet.create({
         color: '#ffffff',
         fontSize: 16,
         fontWeight: '500',
+    },
+    notifButton: {
+        padding: 4,
+        position: 'relative',
+    },
+    badge: {
+        position: 'absolute',
+        top: -2,
+        right: -2,
+        backgroundColor: '#ef4444',
+        borderRadius: 10,
+        minWidth: 18,
+        height: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: '#603c58ff',
+    },
+    badgeText: {
+        color: '#ffffff',
+        fontSize: 9,
+        fontWeight: 'bold',
     },
 });

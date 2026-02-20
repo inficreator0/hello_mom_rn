@@ -20,6 +20,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegistered, setIsRegistered] = useState(false);
   const { login, register, isAuthenticated, isLoading: authLoading, isOnboarded, isCheckingOnboarding } = useAuth();
   const navigation = useNavigation<any>();
   const { onboardingCompleted } = usePreferences();
@@ -27,14 +28,14 @@ const Login = () => {
 
   // Handle navigation after successful login/register and onboarding check
   useEffect(() => {
-    if (isAuthenticated && !authLoading && !isCheckingOnboarding) {
+    if (isAuthenticated && !authLoading && !isCheckingOnboarding && !isRegistered) {
       if (isOnboarded) {
         navigation.navigate("Main" as never);
       } else {
         navigation.navigate("Onboarding" as never);
       }
     }
-  }, [isAuthenticated, isOnboarded, authLoading, isCheckingOnboarding, navigation]);
+  }, [isAuthenticated, isOnboarded, authLoading, isCheckingOnboarding, navigation, isRegistered]);
 
   const handleSubmit = async () => {
     setError("");
@@ -58,7 +59,8 @@ const Login = () => {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
         });
-        // Navigation will be handled by useEffect based on onboarding status
+        setIsRegistered(true);
+        navigation.navigate("VerifyEmail", { email: email.trim() });
       } else if (mode === "forgot") {
         if (!email.trim()) {
           setError("Please enter your email.");

@@ -1,7 +1,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home, Activity, FileText, Stethoscope, Users } from 'lucide-react-native';
+import { Home, Activity, FileText, Stethoscope, Users, Settings, HelpCircle, LogOut } from 'lucide-react-native';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { DefaultTheme, NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
 import { ActivityIndicator, View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -22,15 +23,30 @@ import { Articles } from './pages/Articles';
 import { ArticleDetail } from './pages/ArticleDetail';
 import { Onboarding } from './pages/Onboarding';
 import { PeriodTracker } from './pages/PeriodTracker';
+import CycleSettings from './pages/CycleSettings';
 import { BabyWeightTracker } from './pages/BabyWeightTracker';
 import { ComingSoon } from './pages/ComingSoon';
-
+import { DailyLog } from './pages/DailyLog';
+import { MoodTracker } from './pages/MoodTracker';
+import { WaterTracker } from './pages/WaterTracker';
+import { SleepTracker } from './pages/SleepTracker';
+import { SleepLogForm } from './pages/SleepLogForm';
+import { PregnancyTracker } from './pages/PregnancyTracker';
+import { FeedingTracker } from './pages/FeedingTracker';
+import { NotificationInbox } from './pages/NotificationInbox';
+import { WeightTracker } from './pages/WeightTracker';
+import { NotificationProvider } from './context/NotificationContext';
 import { ResetPassword } from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
+import { HelpSupport } from './pages/HelpSupport';
+import pkg from '../package.json';
+
 
 const prefix = Linking.createURL('/');
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+const Drawer = createDrawerNavigator();
 
 const linking = {
   prefixes: [prefix, 'nova://', 'https://nova'],
@@ -41,10 +57,67 @@ const linking = {
         alias: ['rest-password']
       },
       Login: 'login',
+      VerifyEmail: 'verify-email/:token?',
       PostDetail: 'post/:id',
       ArticleDetail: 'article/:id',
     },
   },
+};
+
+const CustomDrawerContent = (props: any) => {
+  const { logout, user } = useAuth();
+  const navigation = props.navigation;
+
+  return (
+    <DrawerContentScrollView {...props} contentContainerStyle={{ flex: 1 }}>
+      <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9', marginBottom: 10 }}>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0f172a' }}>{user?.name || user?.username || 'Hello Mom'}</Text>
+        <Text style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{user?.email}</Text>
+      </View>
+      <DrawerItem
+        label="Settings"
+        icon={({ color, size }: { color: string; size: number }) => <Settings color={color} size={size} />}
+        onPress={() => navigation.navigate('CycleSettings')}
+      />
+      <DrawerItem
+        label="Help & Support"
+        icon={({ color, size }: { color: string; size: number }) => <HelpCircle color={color} size={size} />}
+        onPress={() => navigation.navigate('HelpSupport')}
+      />
+
+      <View style={{ flex: 1 }} />
+
+      <View style={{ padding: 10 }}>
+        <Text style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center' }}>Version {pkg.version}</Text>
+      </View>
+
+      <DrawerItem
+        label="Logout"
+        style={{ marginBottom: 20 }}
+        labelStyle={{ color: '#ef4444' }}
+        icon={({ size }: { size: number }) => <LogOut color="#ef4444" size={size} />}
+        onPress={logout}
+      />
+    </DrawerContentScrollView>
+  );
+};
+
+const DrawerNavigator = () => {
+  return (
+    <Drawer.Navigator
+      drawerContent={(props) => <CustomDrawerContent {...props} />}
+      screenOptions={{
+        headerShown: false,
+        drawerActiveTintColor: '#ec4899',
+        drawerInactiveTintColor: '#64748b',
+        drawerStyle: {
+          width: 280,
+        },
+      }}
+    >
+      <Drawer.Screen name="MainTabs" component={MainTabs} options={{ drawerLabel: 'Dashboard' }} />
+    </Drawer.Navigator>
+  );
 };
 
 const MainTabs = () => {
@@ -71,7 +144,7 @@ const MainTabs = () => {
         name="Home"
         component={Community}
         options={{
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => <Home color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -79,7 +152,7 @@ const MainTabs = () => {
         component={Trackers}
         options={{
           title: 'Trackers',
-          tabBarIcon: ({ color, size }) => <Activity color={color} size={size} />,
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => <Activity color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -87,7 +160,7 @@ const MainTabs = () => {
         component={Articles}
         options={{
           title: 'Articles',
-          tabBarIcon: ({ color, size }) => <FileText color={color} size={size} />,
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => <FileText color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -95,7 +168,7 @@ const MainTabs = () => {
         component={Consultations}
         options={{
           title: 'Consult',
-          tabBarIcon: ({ color, size }) => <Stethoscope color={color} size={size} />,
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => <Stethoscope color={color} size={size} />,
         }}
       />
       <Tab.Screen
@@ -103,7 +176,7 @@ const MainTabs = () => {
         component={Profile}
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => <Users color={color} size={size} />,
+          tabBarIcon: ({ color, size }: { color: string; size: number }) => <Users color={color} size={size} />,
         }}
       />
     </Tab.Navigator>
@@ -135,19 +208,35 @@ const Navigation = () => {
             <>
               <Stack.Screen name="Login" component={Login} />
               <Stack.Screen name="ResetPassword" component={ResetPassword} />
+              <Stack.Screen name="VerifyEmail" component={VerifyEmail} />
             </>
           ) : !isOnboarded ? (
-            <Stack.Screen name="Onboarding" component={Onboarding} />
+            <>
+              <Stack.Screen name="Onboarding" component={Onboarding} />
+              <Stack.Screen name="VerifyEmail" component={VerifyEmail} />
+            </>
           ) : (
             <>
-              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Main" component={DrawerNavigator} />
               <Stack.Screen name="PostDetail" component={PostDetail} />
               <Stack.Screen name="ArticleDetail" component={ArticleDetail} />
               <Stack.Screen name="CreatePost" component={CreatePost} />
               <Stack.Screen name="PeriodTracker" component={PeriodTracker} />
+              <Stack.Screen name="DailyLog" component={DailyLog} />
+              <Stack.Screen name="CycleSettings" component={CycleSettings} />
               <Stack.Screen name="BabyWeightTracker" component={BabyWeightTracker} />
+              <Stack.Screen name="MoodTracker" component={MoodTracker} />
+              <Stack.Screen name="WaterTracker" component={WaterTracker} />
+              <Stack.Screen name="SleepTracker" component={SleepTracker} />
+              <Stack.Screen name="SleepLogForm" component={SleepLogForm} />
+              <Stack.Screen name="PregnancyTracker" component={PregnancyTracker} />
+              <Stack.Screen name="FeedingTracker" component={FeedingTracker} />
+              <Stack.Screen name="NotificationInbox" component={NotificationInbox} />
+              <Stack.Screen name="WeightTracker" component={WeightTracker} />
+              <Stack.Screen name="HelpSupport" component={HelpSupport} />
               <Stack.Screen name="ComingSoon" component={ComingSoon} />
               <Stack.Screen name="Onboarding" component={Onboarding} />
+              <Stack.Screen name="VerifyEmail" component={VerifyEmail} />
             </>
           )}
         </Stack.Navigator>
@@ -156,17 +245,25 @@ const Navigation = () => {
   );
 };
 
+
+
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <PreferencesProvider>
-          <ToastProvider>
-            <StatusBar style="light" backgroundColor="#603c58ff" />
-            <Navigation />
-          </ToastProvider>
-        </PreferencesProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <PreferencesProvider>
+            <NotificationProvider>
+              <ToastProvider>
+                <StatusBar style="light" backgroundColor="#603c58ff" />
+                <Navigation />
+              </ToastProvider>
+            </NotificationProvider>
+          </PreferencesProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

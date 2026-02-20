@@ -28,8 +28,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     setIsCheckingOnboarding: (isCheckingOnboarding) => set({ isCheckingOnboarding }),
     logout: async () => {
         await clearAuthStorage();
-        await AsyncStorage.removeItem('user');
-        await AsyncStorage.removeItem('token');
         set({ user: null, isAuthenticated: false, isOnboarded: false });
     },
 }));

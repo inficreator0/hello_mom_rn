@@ -75,6 +75,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (storedUser && storedToken) {
           setUser(JSON.parse(storedUser));
           await checkOnboardingStatus();
+
+          // Try to register for push notifications on session restore
+          /*
+          setTimeout(async () => {
+            const token = await registerForPushNotificationsAsync();
+            if (token) {
+              await authAPI.registerDeviceToken(token);
+            }
+          }, 0);
+          */
         }
       } catch (error) {
         console.error("Error parsing stored user:", error);
@@ -137,13 +147,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(newUser);
       await AsyncStorage.setItem("user", JSON.stringify(newUser));
 
-      // Check onboarding status after successful registration
-      const onboardingStatus = await checkOnboardingStatus();
-
       return {
         success: true,
-        isOnboarded: onboardingStatus.isOnboarded,
-        onboardingType: onboardingStatus.onboardingType
+        isOnboarded: false,
+        onboardingType: null
       };
     } catch (error: any) {
       console.error("Registration error:", error);

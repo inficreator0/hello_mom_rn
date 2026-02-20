@@ -125,7 +125,7 @@ export const Articles = () => {
 
   return (
     <PageContainer style={styles.container} edges={['top']}>
-      <ScreenHeader title="Helpful Articles" showBackButton={false} />
+      <ScreenHeader title="Helpful Articles" showBackButton={false} showMenuButton={true} />
 
       <View style={styles.listHeader}>
         <View style={styles.searchContainer}>

@@ -103,13 +103,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   success: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#10a026',
   },
   error: {
     backgroundColor: '#ef4444',
   },
   info: {
-    backgroundColor: '#334155',
+    backgroundColor: '#077dd8',
   },
   text: {
     color: '#ffffff',

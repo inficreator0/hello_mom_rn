@@ -1,112 +1,99 @@
 import { apiRequest } from "../http";
+import {
+  CycleDayLog,
+  CyclePrediction,
+  UserCycleSettings
+} from "../../types";
 
-export interface MenstrualCycleRequest {
-  startDate: string;
-  endDate?: string;
-  notes?: string;
-  flowIntensity?: 'light' | 'medium' | 'heavy' | 'very_heavy';
-  symptoms?: string[];
-  fertilitySigns?: string[];
-  healthMetrics?: string[];
-  mood?: 'happy' | 'sad' | 'irritable' | 'anxious' | 'neutral';
-  painLevel?: number; // 1-10 scale
-  ovulationDate?: string;
-  cycleLength?: number;
-  basalBodyTemp?: number; // in Fahrenheit
-  cervicalMucus?: 'dry' | 'sticky' | 'creamy' | 'watery' | 'egg_white';
-  intercourseDays?: string[]; // dates for fertility tracking
-  medications?: string[];
-  supplements?: string[];
-}
-
-export interface MenstrualCycleResponse {
-  id: number;
-  startDate: string;
-  endDate?: string;
-  notes?: string;
-  flowIntensity?: 'light' | 'medium' | 'heavy' | 'very_heavy';
-  symptoms?: string[];
-  fertilitySigns?: string[];
-  healthMetrics?: string[];
-  mood?: 'happy' | 'sad' | 'irritable' | 'anxious' | 'neutral';
-  painLevel?: number;
-  ovulationDate?: string;
-  cycleLength?: number;
-  basalBodyTemp?: number;
-  cervicalMucus?: 'dry' | 'sticky' | 'creamy' | 'watery' | 'egg_white';
-  intercourseDays?: string[];
-  medications?: string[];
-  supplements?: string[];
-  createdAt: string;
-}
-
-export interface CycleAnalytics {
-  averageCycleLength: number;
-  averagePeriodLength: number;
-  lastPeriodDate: string;
-  nextPeriodDate: string;
-  nextOvulationDate: string;
-  fertileWindow: { start: string; end: string };
-  averageFlowIntensity: string;
-  commonSymptoms: string[];
-  commonFertilitySigns: string[];
-  regularityScore: number; // 0-100
-  cycleVariation: number; // days variation
-  averagePainLevel: number;
-  fertilityScore: number; // 0-100 based on fertility signs
-}
-
-export interface FertilityPrediction {
-  nextOvulationDate: string;
-  fertileWindowStart: string;
-  fertileWindowEnd: string;
-  periodDueDate: string;
-  conceptionProbability: number; // 0-100
-  recommendedActions: string[];
-}
+// ... existing interfaces ...
 
 export const cycleAPI = {
-  // Log a menstrual cycle
-  logCycle: async (data: MenstrualCycleRequest): Promise<MenstrualCycleResponse> => {
-    return await apiRequest<MenstrualCycleResponse>("/trackers/cycle", {
+  // ... existing methods ...
+
+  // Daily Cycle Logging
+  getDailyLog: async (date: string): Promise<CycleDayLog> => {
+    return await apiRequest<CycleDayLog>(`/cycle/daily/${date}`, {
+      method: "GET",
+    });
+  },
+
+  updateDailyLog: async (data: CycleDayLog): Promise<CycleDayLog> => {
+    return await apiRequest<CycleDayLog>("/cycle/daily", {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
 
-  // Get cycle history
-  getCycleHistory: async (): Promise<MenstrualCycleResponse[]> => {
-    return await apiRequest<MenstrualCycleResponse[]>("/trackers/cycle", {
+  getDailyLogRange: async (startDate: string, endDate: string): Promise<CycleDayLog[]> => {
+    return await apiRequest<CycleDayLog[]>(`/cycle/daily/range?startDate=${startDate}&endDate=${endDate}`, {
       method: "GET",
     });
   },
 
-  // Get cycle analytics
-  getCycleAnalytics: async (): Promise<CycleAnalytics> => {
-    return await apiRequest<CycleAnalytics>("/trackers/cycle/analytics", {
+  getRecentLogs: (days?: number, year?: number, month?: number): Promise<CycleDayLog[]> => {
+    let url = "/cycle/daily/recent";
+    const params = new URLSearchParams();
+    if (days) params.append("days", days.toString());
+    if (year) params.append("year", year.toString());
+    if (month) params.append("month", month.toString());
+    if (params.toString()) url += `?${params.toString()}`;
+    return apiRequest<CycleDayLog[]>(url, { method: "GET" });
+  },
+
+  copyYesterdayLog: async (): Promise<CycleDayLog> => {
+    return await apiRequest<CycleDayLog>("/cycle/daily/copy-yesterday", {
+      method: "POST",
+    });
+  },
+
+  deleteDailyLog: async (date: string): Promise<void> => {
+    await apiRequest(`/cycle/daily/${date}`, {
+      method: "DELETE",
+    });
+  },
+
+  deleteAllLogs: async (): Promise<void> => {
+    await apiRequest("/cycle/daily/all", {
+      method: "DELETE",
+    });
+  },
+
+  // Cycle Predictions
+  getPredictions: async (): Promise<CyclePrediction[]> => {
+    return await apiRequest<CyclePrediction[]>("/cycle/predictions", {
       method: "GET",
     });
   },
 
-  // Get fertility predictions
-  getFertilityPrediction: async (): Promise<FertilityPrediction> => {
-    return await apiRequest<FertilityPrediction>("/trackers/cycle/fertility", {
+  generatePredictions: async (): Promise<void> => {
+    await apiRequest("/cycle/predictions/generate", {
+      method: "POST",
+    });
+  },
+
+  dismissPrediction: async (id: number): Promise<void> => {
+    await apiRequest(`/cycle/predictions/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // Cycle Settings
+  getSettings: async (): Promise<UserCycleSettings> => {
+    return await apiRequest<UserCycleSettings>("/cycle/settings", {
       method: "GET",
     });
   },
 
-  // Update cycle entry
-  updateCycle: async (id: number, data: Partial<MenstrualCycleRequest>): Promise<MenstrualCycleResponse> => {
-    return await apiRequest<MenstrualCycleResponse>(`/trackers/cycle/${id}`, {
+  updateSettings: async (data: Partial<UserCycleSettings>): Promise<UserCycleSettings> => {
+    return await apiRequest<UserCycleSettings>("/cycle/settings", {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
-  // Delete cycle entry
-  deleteCycle: async (id: number): Promise<{ message: string }> => {
-    return await apiRequest<{ message: string }>(`/trackers/cycle/${id}`, {
-      method: "DELETE",
+  resetSettings: async (): Promise<UserCycleSettings> => {
+    return await apiRequest<UserCycleSettings>("/cycle/settings/reset", {
+      method: "POST",
     });
   },
 };

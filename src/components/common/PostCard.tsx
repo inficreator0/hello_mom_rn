@@ -32,6 +32,7 @@ import {
 import { Badge } from "../ui/badge";
 import { Post, Comment } from "../../types";
 import { useState, memo } from "react";
+import { formatRelativeTime } from "../../lib/utils/dateUtils";
 import { useAuth } from "../../context/AuthContext";
 import ReplyDialog from "./ReplyDialog";
 import ReportDialog from "./ReportDialog";
@@ -49,7 +50,7 @@ interface PostCardProps {
   ) => void;
   formatDate?: (date: Date | string) => string;
   showActions?: boolean;
-  onReport?: (postId: string | number, reason: string) => void;
+  onReport?: (postId: string | number, data: { category: string; description?: string }) => void;
   /** When true, card has shadow/elevation for a tappable, raised appearance */
   elevated?: boolean;
 }
@@ -66,16 +67,16 @@ interface PostCardHeaderProps {
   showActions: boolean;
   onEdit?: (post: Post) => void;
   onDelete?: (postId: string | number) => void;
-  onReport?: (postId: string | number, reason: string) => void;
+  onReport?: (postId: string | number, data: { category: string; description?: string }) => void;
 }
 
 const PostCardHeader = ({ post, isAuthor, formatDate, showActions, onEdit, onDelete, onReport }: PostCardHeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
-  const handleReportSubmit = (reason: string) => {
+  const handleReportSubmit = (data: { category: string; description?: string }) => {
     if (onReport) {
-      onReport(post.id, reason);
+      onReport(post.id, data);
     }
     setIsReportDialogOpen(false);
   };
@@ -310,17 +311,16 @@ const PostCard = memo(({
     scale.value = withSpring(1);
   };
 
-  const handleReport = (id: string | number, reason: string) => {
+  const handleReport = (id: string | number, data: { category: string; description?: string }) => {
     if (onReport) {
-      onReport(id, reason);
+      onReport(id, data);
     } else {
-      showToast(`Post reported: ${reason.slice(0, 20)}...`, "success");
+      showToast(`Post reported: ${data.category}`, "success");
     }
   };
 
   const defaultFormatDate = (date: Date | string) => {
-    const dateObj = typeof date === "string" ? new Date(date) : date;
-    return dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatRelativeTime(date);
   };
 
   const format = formatDate || defaultFormatDate;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, StyleSheet } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { ArrowLeft, Trash2, ArrowBigUp, ArrowBigDown, MessageSquare, Bookmark, BookmarkCheck } from "lucide-react-native";
+import { ArrowLeft, Trash2, ArrowBigUp, ArrowBigDown, MessageSquare, Bookmark, BookmarkCheck, Flag } from "lucide-react-native";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -9,6 +9,7 @@ import { usePostsStore } from "../store/postsStore";
 import { postsAPI, commentsAPI } from "../lib/api/posts";
 import CommentDialog from "../components/common/CommentDialog";
 import ReplyDialog from "../components/common/ReplyDialog";
+import ReportDialog from "../components/common/ReportDialog";
 import { Comment, CommunityCategory } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
@@ -31,6 +32,7 @@ const PostDetail = () => {
   const [loadedPostId, setLoadedPostId] = useState<string | null>(null);
   const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
   useEffect(() => {
     if (id && !post) {
@@ -160,6 +162,16 @@ const PostDetail = () => {
     );
   };
 
+  const handleReport = async (data: { category: string; description?: string }) => {
+    try {
+      await postsAPI.report(String(post.id), data);
+      showToast("Post reported", "success");
+    } catch (error) {
+      console.error("Report failed", error);
+      showToast("Failed to report post", "error");
+    }
+  };
+
   return (
     <PageContainer style={styles.container} edges={['top']}>
       <ScreenHeader title="Post Details" />
@@ -180,6 +192,11 @@ const PostDetail = () => {
               {isAuthor && (
                 <Pressable onPress={handleDeletePost} style={styles.deleteButton}>
                   <Trash2 size={20} color="#ef4444" />
+                </Pressable>
+              )}
+              {!isAuthor && (
+                <Pressable onPress={() => setIsReportDialogOpen(true)} style={styles.deleteButton}>
+                  <Flag size={20} color="#64748b" />
                 </Pressable>
               )}
             </View>
@@ -255,6 +272,12 @@ const PostDetail = () => {
         value={commentText}
         onChange={setCommentText}
         onSubmit={handleAddComment}
+      />
+
+      <ReportDialog
+        open={isReportDialogOpen}
+        onOpenChange={setIsReportDialogOpen}
+        onSubmit={handleReport}
       />
     </PageContainer>
   );

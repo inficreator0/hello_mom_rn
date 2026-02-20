@@ -68,18 +68,11 @@ export const postsAPI = {
     });
   },
 
-  report: async (id: string, reason: string) => {
-    // Assuming backend endpoint for reporting
-    try {
-      await apiRequest(`/posts/${id}/report`, {
-        method: "POST",
-        body: JSON.stringify({ reason }),
-      });
-    } catch (e) {
-      // Fallback or ignore if endpoint doesn't exist yet, but logically this is where it goes
-      console.warn("Report API might not be implemented on backend yet", e);
-      throw e;
-    }
+  report: async (id: string, data: { category: string; description?: string }) => {
+    return await apiRequest<{ message: string }>(`/posts/${id}/report`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 
   getMyPosts: async (page: number = 0, size: number = 20) => {

@@ -106,9 +106,9 @@ const Community = () => {
     }
   };
 
-  const handleReport = async (postId: string | number, reason: string) => {
+  const handleReport = async (postId: string | number, data: { category: string; description?: string }) => {
     try {
-      await postsAPI.report(String(postId), reason);
+      await postsAPI.report(String(postId), data);
       showToast("Post reported", "success");
     } catch (error) {
       console.error("Report failed", error);
@@ -167,7 +167,7 @@ const Community = () => {
 
   return (
     <PageContainer style={styles.container} edges={['top']}>
-      <ScreenHeader title="Community" showBackButton={false} />
+      <ScreenHeader title="Community" showBackButton={false} showMenuButton={true} />
 
       <View style={styles.content}>
         <View style={styles.header}>

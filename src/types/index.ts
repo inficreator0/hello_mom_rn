@@ -102,6 +102,68 @@ export interface WeightData {
   birthHeadCircumference?: number;
 }
 
+export type FlowLevel = 'light' | 'medium' | 'heavy' | 'spotting' | null;
+export type ConfidenceLevel = 'low' | 'medium' | 'high';
+export type PredictionType = 'next_period' | 'fertile_window' | 'ovulation';
+
+export interface CycleDayLog {
+  id?: number;
+  userId?: number;
+  logDate: string; // ISO date string
+  flowLevel?: FlowLevel;
+  painLevel?: number; // 0-10
+  painLocations?: string[];
+  moodTags?: string[];
+  energyLevel?: number; // 1-5
+  symptoms?: string[];
+  bodySigns?: {
+    cervical_mucus?: string;
+    basal_temp?: number;
+  };
+  notes?: string;
+  isEstimate?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CyclePrediction {
+  id: number;
+  userId: number;
+  predictionType: PredictionType;
+  estimatedDate: string;
+  estimatedEndDate?: string;
+  confidenceLevel: ConfidenceLevel;
+  basedOnCyclesCount: number;
+  medicalDisclaimer: string;
+}
+
+export interface UserCycleSettings {
+  userId: number;
+  typicalCycleLength?: number;
+  typicalPeriodLength?: number;
+  trackingGoals: string[];
+  enabledFeatures: {
+    flow: boolean;
+    pain: boolean;
+    mood: boolean;
+    energy: boolean;
+    symptoms: boolean;
+    body_signs: boolean;
+  };
+  customSymptoms: string[];
+  customMoods: string[];
+  showPredictions: boolean;
+  showFertilityInfo: boolean;
+  reminderEnabled: boolean;
+  reminderTone: 'gentle' | 'normal' | 'loud';
+  privacyMode: 'full' | 'standard' | 'minimal';
+  medicalConditions: string[];
+  hidePregnancyContent: boolean;
+  gentleNotificationsOnly: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Article {
   id: number;
   title: string;

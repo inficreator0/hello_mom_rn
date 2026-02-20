@@ -17,11 +17,12 @@ import { ScreenHeader } from "../components/common/ScreenHeader";
 import { SvgUri } from "react-native-svg";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../components/ui/tabs";
 import { useToast } from "../context/ToastContext";
+import { formatLocalDate } from "../lib/utils/dateUtils";
 
 const Profile = () => {
   const { logout, user: authUser } = useAuth();
   const navigation = useNavigation<any>();
-  const { mode, setMode, babyName, babyStage, firstTimeMom, focusAreas } =
+  const { mode, setMode, babyName, babyStage } =
     usePreferences();
 
   const [bio, setBio] = useState(
@@ -124,9 +125,9 @@ const Profile = () => {
     }
   };
 
-  const handleReport = async (postId: string | number, reason: string) => {
+  const handleReport = async (postId: string | number, data: { category: string; description?: string }) => {
     try {
-      await postsAPI.report(String(postId), reason);
+      await postsAPI.report(String(postId), data);
       showToast("Post reported", "success");
     } catch (error) {
       console.error("Report failed", error);
@@ -318,8 +319,7 @@ const Profile = () => {
   }, [activeTab, authUser?.username]);
 
   const formatDate = (date: Date | string) => {
-    const dateObj = typeof date === "string" ? new Date(date) : date;
-    return dateObj.toLocaleDateString("en-US", {
+    return formatLocalDate(date, {
       year: "numeric",
       month: "short",
     });
@@ -330,6 +330,7 @@ const Profile = () => {
       <ScreenHeader
         title="Profile"
         showBackButton={false}
+        showMenuButton={true}
       />
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Profile Header */}
@@ -401,7 +402,7 @@ const Profile = () => {
               Focus on baby-themed trackers and tools across the app.
             </Text>
             <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Enable Baby Mode</Text>
+              <Text style={styles.toggleLabel}>My baby and me</Text>
               <Switch
                 value={mode === "baby"}
                 onValueChange={(enabled) => setMode(enabled ? "baby" : "community")}

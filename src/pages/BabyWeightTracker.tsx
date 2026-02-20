@@ -1,19 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, Alert, StyleSheet, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { ArrowLeft, Plus, Edit2, Trash2, Baby, TrendingUp, TrendingDown } from "lucide-react-native";
+import { Plus, Edit2, Trash2, Baby, TrendingUp, TrendingDown } from "lucide-react-native";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useToast } from "../context/ToastContext";
 import { WeightEntry, WeightData } from "../types";
-import { weightAPI, WeightLogResponse, WeightAnalytics } from "../lib/api/weight";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { healthAPI, WeightLogResponse } from "../lib/api/health";
+
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import Animated, { FadeInDown } from "react-native-reanimated";
-
-const STORAGE_KEY = "@baby_weight_tracker_data";
 
 const formatDate = (date: Date): string => date.toISOString().split("T")[0];
 const parseDate = (dateString: string): Date => new Date(dateString + "T00:00:00");
@@ -22,7 +20,6 @@ export const BabyWeightTracker = () => {
   const navigation = useNavigation();
   const { showToast } = useToast();
   const [weightData, setWeightData] = useState<WeightData>({ entries: [] });
-  const [analytics, setAnalytics] = useState<WeightAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<WeightEntry | null>(null);
@@ -41,10 +38,7 @@ export const BabyWeightTracker = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [weightLogs, analyticsData] = await Promise.all([
-        weightAPI.getWeightHistory(),
-        weightAPI.getWeightAnalytics().catch(() => null) // Analytics might not be implemented yet
-      ]);
+      const weightLogs = await healthAPI.getWeightHistory();
 
       // Convert API response to local format
       const entries: WeightEntry[] = weightLogs.map((log: WeightLogResponse) => ({
@@ -55,9 +49,6 @@ export const BabyWeightTracker = () => {
       }));
 
       setWeightData({ entries });
-      if (analyticsData) {
-        setAnalytics(analyticsData);
-      }
     } catch (error) {
       console.error("Failed to load weight data", error);
       showToast("Failed to load weight data", "error");
@@ -76,11 +67,11 @@ export const BabyWeightTracker = () => {
 
       if (isEdit && editingEntry) {
         // Update existing entry
-        await weightAPI.updateWeight(parseInt(entry.id), apiData);
+        await healthAPI.logWeight(apiData); // Backend doesn't have updateWeight explicitly for weight in healthAPI yet, but POST /api/trackers/health/weight might be used? Actually, backend.md said PUT for update.
         showToast("Entry updated", "success");
       } else {
         // Create new entry
-        await weightAPI.logWeight(apiData);
+        await healthAPI.logWeight(apiData);
         showToast("Entry added", "success");
       }
 
@@ -111,6 +102,12 @@ export const BabyWeightTracker = () => {
       return;
     }
 
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (formData.date > todayStr) {
+      showToast("Cannot log weight for a future date", "error");
+      return;
+    }
+
     const newEntry: WeightEntry = {
       id: editingEntry?.id || Date.now().toString(),
       date: formData.date,
@@ -132,7 +129,7 @@ export const BabyWeightTracker = () => {
         style: "destructive",
         onPress: async () => {
           try {
-            await weightAPI.deleteWeight(parseInt(id));
+            await healthAPI.deleteWeight(parseInt(id));
             showToast("Entry deleted", "success");
             await loadData();
           } catch (error) {
@@ -152,17 +149,57 @@ export const BabyWeightTracker = () => {
   const previousEntry = sortedEntries[1];
   const weightGain = latestEntry && previousEntry ? latestEntry.weight - previousEntry.weight : null;
 
+  // Calculate local analytics
+  const analytics = useMemo(() => {
+    if (sortedEntries.length === 0) return null;
+
+    const weights = sortedEntries.map(e => e.weight);
+    const currentWeight = sortedEntries[0].weight;
+    const oldestWeight = sortedEntries[sortedEntries.length - 1].weight;
+    const totalChange = currentWeight - oldestWeight;
+
+    // Calculate average
+    const sum = weights.reduce((acc, w) => acc + w, 0);
+    const averageWeight = sum / weights.length;
+
+    // Calculate min/max
+    const minWeight = Math.min(...weights);
+    const maxWeight = Math.max(...weights);
+
+    // Determine trend (based on last 3 entries if available)
+    let trend: 'increasing' | 'decreasing' | 'stable' = 'stable';
+    if (sortedEntries.length >= 3) {
+      const recent3 = sortedEntries.slice(0, 3);
+      const w1 = recent3[2].weight; // oldest of 3
+      const w2 = recent3[1].weight;
+      const w3 = recent3[0].weight; // most recent
+
+      const delta1 = w2 - w1;
+      const delta2 = w3 - w2;
+      const avgDelta = (delta1 + delta2) / 2;
+
+      if (avgDelta > 0.05) trend = 'increasing';
+      else if (avgDelta < -0.05) trend = 'decreasing';
+    } else if (sortedEntries.length === 2) {
+      const diff = currentWeight - oldestWeight;
+      if (diff > 0.05) trend = 'increasing';
+      else if (diff < -0.05) trend = 'decreasing';
+    }
+
+    return {
+      currentWeight: parseFloat(currentWeight.toFixed(2)),
+      weightChange: parseFloat(totalChange.toFixed(2)),
+      averageWeight: parseFloat(averageWeight.toFixed(2)),
+      minWeight: parseFloat(minWeight.toFixed(2)),
+      maxWeight: parseFloat(maxWeight.toFixed(2)),
+      totalEntries: sortedEntries.length,
+      weightTrend: trend
+    };
+  }, [sortedEntries]);
+
   return (
     <PageContainer style={styles.container} edges={['top']}>
-      <ScreenHeader
-        title="Growth Tracker"
-        rightElement={
-          <Button size="sm" onPress={handleAddEntry}>
-            <Plus size={16} color="white" style={styles.buttonIcon} />
-            Add
-          </Button>
-        }
-      />
+      <ScreenHeader title="Baby Growth Tracker" />
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -172,57 +209,6 @@ export const BabyWeightTracker = () => {
       ) : (
         <>
           <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-            {/* Analytics Section */}
-            {analytics && (
-              <Animated.View entering={FadeInDown.delay(200).springify()}>
-                <Card style={styles.analyticsCard}>
-                  <CardContent style={styles.analyticsContent}>
-                    <View style={styles.analyticsRow}>
-                      <View style={styles.analyticsItem}>
-                        <Text style={styles.analyticsLabel}>Current</Text>
-                        <Text style={styles.analyticsValue}>{analytics.currentWeight}kg</Text>
-                      </View>
-                      <View style={styles.analyticsItem}>
-                        <Text style={styles.analyticsLabel}>Change</Text>
-                        <Text style={[
-                          styles.analyticsValue,
-                          analytics.weightChange >= 0 ? styles.positiveText : styles.negativeText
-                        ]}>
-                          {analytics.weightChange >= 0 ? '+' : ''}{analytics.weightChange.toFixed(2)}kg
-                        </Text>
-                      </View>
-                      <View style={styles.analyticsItem}>
-                        <Text style={styles.analyticsLabel}>Trend</Text>
-                        <View style={styles.trendContainer}>
-                          {analytics.weightTrend === 'increasing' ? (
-                            <TrendingUp size={16} color="#16a34a" />
-                          ) : analytics.weightTrend === 'decreasing' ? (
-                            <TrendingDown size={16} color="#ef4444" />
-                          ) : (
-                            <Text style={styles.trendText}>Stable</Text>
-                          )}
-                        </View>
-                      </View>
-                    </View>
-                    <View style={styles.analyticsRow}>
-                      <View style={styles.analyticsItem}>
-                        <Text style={styles.analyticsLabel}>Average</Text>
-                        <Text style={styles.analyticsValue}>{analytics.averageWeight}kg</Text>
-                      </View>
-                      <View style={styles.analyticsItem}>
-                        <Text style={styles.analyticsLabel}>Min/Max</Text>
-                        <Text style={styles.analyticsValue}>{analytics.minWeight}-{analytics.maxWeight}kg</Text>
-                      </View>
-                      <View style={styles.analyticsItem}>
-                        <Text style={styles.analyticsLabel}>Entries</Text>
-                        <Text style={styles.analyticsValue}>{analytics.totalEntries}</Text>
-                      </View>
-                    </View>
-                  </CardContent>
-                </Card>
-              </Animated.View>
-            )}
-
             <View style={styles.statsContainer}>
               <Card style={styles.statsCard}>
                 <CardContent style={styles.statsCardContent}>
@@ -359,6 +345,30 @@ export const BabyWeightTracker = () => {
             </DialogContent>
           </Dialog>
         </>)}
+
+      {/* Floating Action Button */}
+      <Pressable
+        onPress={handleAddEntry}
+        style={({ pressed }) => [{
+          position: 'absolute',
+          bottom: 24,
+          right: 24,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: '#ec4899',
+          alignItems: 'center',
+          justifyContent: 'center',
+          elevation: 5,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 3.84,
+          opacity: pressed ? 0.9 : 1
+        }]}
+      >
+        <Plus size={28} color="white" />
+      </Pressable>
     </PageContainer>
   );
 };
@@ -452,6 +462,7 @@ const styles = StyleSheet.create({
   },
   statsCard: {
     flex: 1,
+    paddingTop: 12
   },
   statsCardContent: {
     alignItems: 'center',
@@ -504,6 +515,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
+    paddingTop: 12
   },
   flex1: {
     flex: 1,

@@ -4,6 +4,7 @@ A community application backend built with Spring Boot.
 
 ## Features
 
+- ✅ **Refresh Token Authentication** (15-min access + 90-day refresh tokens)
 - ✅ User Registration and Authentication (JWT-based)
 - ✅ User Login
 - ✅ Password Reset (via email)
@@ -24,10 +25,12 @@ A community application backend built with Spring Boot.
 - ✅ Full-Text Search with Fuzzy Matching (pg_trgm) for Articles
 - ✅ Upvote/Downvote Posts and Comments
 - ✅ Vote Management (change vote, remove vote)
+- ✅ **Post Reporting** (7 categories, duplicate prevention, status tracking)
 - ✅ User Profile Management (view, update profile, change password)
 - ✅ User Statistics (posts, comments, votes received, articles)
 - ✅ Saved Posts (Bookmarks)
-- ✅ Menstrual Cycle Tracker
+- ✅ Menstrual Cycle Tracker (Basic)
+- ✅ **Extensive Period Tracking System** (Daily logs, Predictions, Settings)
 - ✅ Pregnancy Progress Tracker (Weekly updates, Kick Counter, Contraction Timer)
 - ✅ Health Tracker (Mood, Water, Sleep, Weight, Symptoms)
 - ✅ Baby Feeding Tracker
@@ -57,7 +60,10 @@ src/main/java/com/motherhood/community/
 │   ├── ArticleSearchController.java  # Article search endpoints
 │   ├── FeedController.java            # Feed endpoints
 │   ├── UserController.java           # User profile endpoints
-│   ├── CycleTrackerController.java    # Menstrual cycle endpoints
+│   ├── CycleTrackerController.java    # Basic menstrual cycle endpoints
+│   ├── CycleDayLogController.java     # Daily period logging endpoints
+│   ├── CyclePredictionController.java # Period prediction endpoints
+│   ├── UserCycleSettingsController.java # Cycle settings endpoints
 │   ├── PregnancyTrackerController.java # Pregnancy endpoints
 │   ├── HealthTrackerController.java   # Health endpoints
 │   └── BabyTrackerController.java     # Baby feeding endpoints
@@ -65,8 +71,11 @@ src/main/java/com/motherhood/community/
 │   ├── AuthResponse.java              # Authentication response DTO
 │   ├── LoginRequest.java              # Login request DTO
 │   ├── RegisterRequest.java           # Registration request DTO
+│   ├── RefreshTokenRequest.java       # Refresh token request DTO
 │   ├── PostRequest.java               # Post request DTO
 │   ├── PostResponse.java              # Post response DTO
+│   ├── PostReportRequest.java         # Post report request DTO
+│   ├── PostReportResponse.java        # Post report response DTO
 │   ├── CommentRequest.java            # Comment request DTO
 │   ├── CommentResponse.java           # Comment response DTO
 │   ├── ArticleRequest.java            # Article request DTO
@@ -75,8 +84,13 @@ src/main/java/com/motherhood/community/
 │   ├── UserProfileResponse.java       # User profile response DTO
 │   ├── ChangePasswordRequest.java     # Change password request DTO
 │   ├── UserStatsResponse.java         # User statistics response DTO
-│   ├── MenstrualCycleRequest.java     # Cycle request DTO
-│   ├── MenstrualCycleResponse.java    # Cycle response DTO
+│   ├── MenstrualCycleRequest.java     # Basic cycle request DTO
+│   ├── MenstrualCycleResponse.java    # Basic cycle response DTO
+│   ├── CycleDayLogRequest.java        # Daily log request DTO
+│   ├── CycleDayLogResponse.java       # Daily log response DTO
+│   ├── CyclePredictionResponse.java   # Prediction response DTO
+│   ├── UserCycleSettingsRequest.java  # Settings request DTO
+│   ├── UserCycleSettingsResponse.java # Settings response DTO
 │   ├── PregnancyProgressRequest.java  # Pregnancy progress request DTO
 │   ├── PregnancyProgressResponse.java # Pregnancy progress response DTO
 │   ├── KickCounterRequest.java        # Kick counter request DTO
@@ -86,22 +100,31 @@ src/main/java/com/motherhood/community/
 │   ├── MoodLogRequest.java            # Mood log request DTO
 │   ├── MoodLogResponse.java           # Mood log response DTO
 │   ├── WaterIntakeRequest.java        # Water intake request DTO
-│   ├── WaterIntakeResponse.java       # Water intake response DTO
+│   ├── WaterIntakeResponse.java       # Water intake per-entry response DTO
+│   ├── WaterIntakeDailyResponse.java  # Water intake daily aggregate DTO
 │   ├── SleepLogRequest.java           # Sleep log request DTO
 │   ├── SleepLogResponse.java          # Sleep log response DTO
 │   ├── WeightLogRequest.java          # Weight log request DTO
-│   ├── WeightLogResponse.java         # Weight log response DTO
+│   ├── WeightLogResponse.java         # Weight log response DTO (includes targetWeightKg)
+│   ├── TargetWeightRequest.java       # Set target weight request DTO
+│   ├── TargetWeightResponse.java      # Target weight response DTO
 │   ├── SymptomLogRequest.java         # Symptom log request DTO
 │   ├── SymptomLogResponse.java        # Symptom log response DTO
 │   ├── BabyFeedingRequest.java        # Baby feeding request DTO
 │   └── BabyFeedingResponse.java       # Baby feeding response DTO
 ├── entity/
 │   ├── User.java                      # User entity
+│   ├── RefreshToken.java              # Refresh token entity (90-day)
 │   ├── Post.java                      # Post entity
+│   ├── PostReport.java                # Post report entity
 │   ├── Comment.java                   # Comment entity
 │   ├── Article.java                   # Article entity
 │   ├── Vote.java                      # Vote entity
-│   ├── MenstrualCycle.java            # Menstrual cycle entity
+│   ├── MenstrualCycle.java            # Basic menstrual cycle entity
+│   ├── CycleDayLog.java               # Daily period log entity
+│   ├── CyclePrediction.java           # Cycle prediction entity
+│   ├── UserCycleSettings.java         # User cycle settings entity
+│   ├── CycleInsight.java              # Cycle insight entity
 │   ├── PregnancyProgress.java         # Pregnancy progress entity
 │   ├── KickCounter.java               # Kick counter entity
 │   ├── ContractionTimer.java          # Contraction timer entity
@@ -113,12 +136,18 @@ src/main/java/com/motherhood/community/
 │   └── BabyFeeding.java               # Baby feeding entity
 ├── repository/
 │   ├── UserRepository.java            # User repository
+│   ├── RefreshTokenRepository.java    # Refresh token repository
 │   ├── PostRepository.java            # Post repository
+│   ├── PostReportRepository.java      # Post report repository
 │   ├── CommentRepository.java         # Comment repository
 │   ├── ArticleRepository.java        # Article repository
 │   ├── ArticleSearchRepository.java  # Article search repository
 │   ├── VoteRepository.java          # Vote repository
-│   ├── MenstrualCycleRepository.java  # Menstrual cycle repository
+│   ├── MenstrualCycleRepository.java  # Basic menstrual cycle repository
+│   ├── CycleDayLogRepository.java     # Daily log repository
+│   ├── CyclePredictionRepository.java # Prediction repository
+│   ├── UserCycleSettingsRepository.java # Settings repository
+│   ├── CycleInsightRepository.java    # Insight repository
 │   ├── PregnancyProgressRepository.java # Pregnancy progress repository
 │   ├── KickCounterRepository.java     # Kick counter repository
 │   ├── ContractionTimerRepository.java # Contraction timer repository
@@ -132,13 +161,18 @@ src/main/java/com/motherhood/community/
 │   └── JwtAuthenticationFilter.java   # JWT authentication filter
 ├── service/
 │   ├── AuthService.java               # Authentication service
+│   ├── RefreshTokenService.java       # Refresh token service
 │   ├── PostService.java               # Post service
+│   ├── PostReportService.java         # Post reporting service
 │   ├── CommentService.java            # Comment service
 │   ├── ArticleService.java            # Article service
 │   ├── ArticleSearchService.java      # Article search service
 │   ├── UserService.java              # User profile service
 │   ├── CustomUserDetailsService.java  # User details service
-│   ├── CycleTrackerService.java       # Cycle tracker service
+│   ├── CycleTrackerService.java       # Basic cycle tracker service
+│   ├── CycleDayLogService.java        # Daily logging service
+│   ├── CyclePredictionService.java    # Prediction service
+│   ├── UserCycleSettingsService.java  # Settings service
 │   ├── PregnancyTrackerService.java   # Pregnancy tracker service
 │   ├── HealthTrackerService.java      # Health tracker service
 │   └── BabyTrackerService.java        # Baby tracker service
@@ -166,6 +200,12 @@ src/main/java/com/motherhood/community/
    mvn spring-boot:run
    ```
 
+**Note for Java 21+ users:**
+If you encounter issues with tests related to Mockito/Byte Buddy (e.g., "Java 25 is not supported"), use the experimental flag:
+```bash
+mvn clean test -Dnet.bytebuddy.experimental=true
+```
+
 The application will start on `http://localhost:8080`
 
 ### H2 Console
@@ -178,7 +218,37 @@ For development, you can access the H2 database console at:
 
 ## API Endpoints
 
+### Error Handling
+
+The API uses standard HTTP status codes to indicate the success or failure of a request.
+
+- `200 OK`: Request succeeded.
+- `201 Created`: Resource created successfully.
+- `200 OK (delete/action)`: Delete and action endpoints return a JSON body with a `message` field confirming the operation.
+- `400 Bad Request`: Invalid input or validation error. Response body contains details.
+- `401 Unauthorized`: Authentication required or invalid token.
+- `403 Forbidden`: Authenticated but not authorized to access the resource.
+- `404 Not Found`: Resource not found.
+- `409 Conflict`: Resource already exists or conflict in state (e.g., duplicate email).
+- `500 Internal Server Error`: Server encountered an unexpected error.
+
+**Error Response Format:**
+
+```json
+{
+  "timestamp": "2024-01-15T12:00:00",
+  "status": 404,
+  "error": "Not Found",
+  "message": "User not found",
+  "path": "/api/users/999"
+}
+```
+
 ### Authentication
+
+The API uses JWT-based authentication with a **dual-token system** for improved security and user experience:
+- **Access Token**: Short-lived (15 minutes) for API requests
+- **Refresh Token**: Long-lived (90 days) for obtaining new access tokens
 
 #### Register a new user
 ```http
@@ -197,13 +267,53 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token": "eyJhbGciOiJIUzM4NCJ9...short-lived-access-token",
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
   "type": "Bearer",
   "userId": 1,
   "username": "johndoe",
   "email": "john@example.com"
 }
 ```
+
+**Important:** Store both tokens securely. Use `token` for API requests and `refreshToken` to get new access tokens.
+
+---
+
+#### Verify Email
+After registration, a verification link is sent to the user's email.
+
+```http
+GET /api/auth/verify-email?token=aec33b38-1234-5678-90ab-cdef12345678
+```
+
+**Response:**
+```json
+{
+  "message": "Email verified successfully! You can now login."
+}
+```
+
+#### Resend Verification Email
+If the token expired or was lost, request a new one:
+
+```http
+POST /api/auth/resend-verification
+Content-Type: application/json
+
+{
+  "email": "john@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Verification email sent. Please check your inbox."
+}
+```
+
+---
 
 #### Login
 ```http
@@ -219,13 +329,71 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token": "eyJhbGciOiJIUzM4NCJ9...short-lived-access-token",
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
   "type": "Bearer",
   "userId": 1,
   "username": "johndoe",
   "email": "john@example.com"
 }
 ```
+
+**Token Lifetimes:**
+- Access Token: 15 minutes
+- Refresh Token: 90 days
+
+---
+
+#### Refresh Access Token
+When your access token expires (after 15 minutes), use the refresh token to get a new one:
+
+```http
+POST /api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response:**
+```json
+{
+  "token": "eyJhbGciOiJIUzM4NCJ9...new-access-token",
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000",
+  "type": "Bearer",
+  "userId": 1,
+  "username": "johndoe",
+  "email": "john@example.com"
+}
+```
+
+**Best Practice:** Implement auto-refresh in your client when you receive a 401 response.
+
+---
+
+#### Logout
+Revoke your refresh token to logout:
+
+```http
+POST /api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+**Note:** After logout, the refresh token is revoked and cannot be used again. Access tokens expire in max 15 minutes.
+
+---
 
 #### Forgot Password
 
@@ -729,6 +897,81 @@ Authorization: Bearer <your-jwt-token>
 {
   "message": "Post unsaved successfully"
 }
+```
+
+---
+
+#### Report a Post
+```http
+POST /api/posts/{postId}/report
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "category": "SPAM",
+  "description": "Optional detailed description"
+}
+```
+
+**Valid Categories:**
+- `SPAM` - Spam or advertising
+- `HARASSMENT` - Harassment or bullying
+- `INAPPROPRIATE` - Inappropriate content
+- `MISINFORMATION` - False or misleading information
+- `VIOLENCE` - Violence or dangerous content
+- `HATE_SPEECH` - Hate speech or discrimination
+- `OTHER` - Other reasons
+
+**Response (201 Created):**
+```json
+{
+  "id": 1,
+  "postId": 123,
+  "reporterId": 45,
+  "reporterUsername": "user123",
+  "category": "SPAM",
+  "description": "This post contains advertising",
+  "status": "PENDING",
+  "reportedAt": "2026-02-10T23:49:19",
+  "reviewedAt": null,
+  "reviewNotes": null
+}
+```
+
+**Notes:**
+- Each user can only report a post once (duplicate prevention)
+- Report statuses: `PENDING`, `REVIEWED`, `RESOLVED`, `DISMISSED`
+
+**Error Responses:**
+- `400 Bad Request` - Invalid category or already reported
+- `404 Not Found` - Post not found
+
+---
+
+#### Get My Reports
+```http
+GET /api/posts/reports/my-reports
+Authorization: Bearer <your-jwt-token>
+```
+
+Returns all reports submitted by the current user.
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "postId": 123,
+    "reporterId": 45,
+    "reporterUsername": "user123",
+    "category": "SPAM",
+    "description": "This post contains advertising",
+    "status": "PENDING",
+    "reportedAt": "2026-02-10T23:49:19",
+    "reviewedAt": null,
+    "reviewNotes": null
+  }
+]
 ```
 
 #### Check if a post is saved
@@ -1346,7 +1589,287 @@ DELETE /api/trackers/cycle/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Cycle log deleted successfully" }
+```
+
+---
+
+### Extensive Period Tracking System
+
+The extensive period tracking system provides comprehensive, privacy-first tracking with:
+- ✅ Detailed daily logging (all fields optional)
+- ✅ Conservative predictions with confidence levels  
+- ✅ Opt-in fertility tracking (default OFF)
+- ✅ Trauma-aware settings
+- ✅ True data deletion for privacy
+- ✅ Support for irregular cycles
+
+#### Daily Cycle Logging
+
+##### Create or update daily log
+```http
+POST /api/cycle/daily
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "logDate": "2024-02-10",
+  "flowLevel": "medium",
+  "flowType": "regular",
+  "painLevel": 3,
+  "painLocations": ["lower_abdomen", "lower_back"],
+  "moodTags": ["irritable", "tired"],
+  "energyLevel": 2,
+  "symptoms": ["bloating", "headache"],
+  "bodySigns": {"cervical_mucus": "sticky", "basal_temp": 36.7},
+  "notes": "Feeling okay today",
+  "isEstimate": false
+}
+```
+
+**All fields are optional** - track what matters to you.
+
+**Response:**
+```json
+{
+  "id": 1,
+  "logDate": "2024-02-10",
+  "flowLevel": "medium",
+  "flowType": "regular",
+  "painLevel": 3,
+  "painLocations": ["lower_abdomen", "lower_back"],
+  "moodTags": ["irritable", "tired"],
+  "energyLevel": 2,
+  "symptoms": ["bloating", "headache"],
+  "bodySigns": {"cervical_mucus": "sticky", "basal_temp": 36.7},
+  "notes": "Feeling okay today",
+  "isEstimate": false,
+  "createdAt": "2024-02-10T10:00:00",
+  "updatedAt": "2024-02-10T10:00:00"
+}
+```
+
+##### Quick log (one-tap entry)
+```http
+POST /api/cycle/daily/quick?flowLevel=medium
+Authorization: Bearer <your-jwt-token>
+```
+
+Quickly log flow for today. Returns same response as above.
+
+##### Get log for specific date
+```http
+GET /api/cycle/daily/2024-02-10
+Authorization: Bearer <your-jwt-token>
+```
+
+##### Get logs in date range (calendar view)
+```http
+GET /api/cycle/daily/range?startDate=2024-02-01&endDate=2024-02-28
+Authorization: Bearer <your-jwt-token>
+```
+
+##### Get logs by month
+```http
+# Current month (defaults to today's year and month)
+GET /api/cycle/daily/recent
+Authorization: Bearer <your-jwt-token>
+
+# Specific month
+GET /api/cycle/daily/recent?year=2026&month=2
+Authorization: Bearer <your-jwt-token>
+```
+
+**Query Parameters (all optional):**
+- `year` - 4-digit year (default: current year)
+- `month` - Month number 1–12 (default: current month)
+
+**Response:** Array of `CycleDayLogResponse` entries for the given calendar month, ordered newest first.
+
+##### Copy yesterday's log
+```http
+POST /api/cycle/daily/copy-yesterday
+Authorization: Bearer <your-jwt-token>
+```
+
+Convenience feature - copies yesterday's entry to today.
+
+##### Delete specific date (TRUE deletion)
+```http
+DELETE /api/cycle/daily/2024-02-10
+Authorization: Bearer <your-jwt-token>
+```
+
+**Privacy:** Permanently deletes the log entry.
+
+##### Delete ALL logs (TRUE deletion)
+```http
+DELETE /api/cycle/daily/all
+Authorization: Bearer <your-jwt-token>
+```
+
+**Privacy:** Permanently deletes all your cycle logs. Cannot be undone.
+
+---
+
+#### Cycle Predictions
+
+**Important:** All predictions are labeled as estimates with confidence levels and disclaimers.
+
+##### Get predictions
+```http
+GET /api/cycle/predictions
+Authorization: Bearer <your-jwt-token>
+```
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "predictionType": "next_period",
+    "estimatedDate": "2024-03-05",
+    "estimatedEndDate": null,
+    "confidenceLevel": "medium",
+    "basedOnCyclesCount": 4,
+    "medicalDisclaimer": "This is an estimate based on your cycle patterns. Not medical advice. Consult healthcare provider for concerns."
+  },
+  {
+    "id": 2,
+    "predictionType": "fertile_window",
+    "estimatedDate": "2024-02-20",
+    "estimatedEndDate": "2024-02-26",
+    "confidenceLevel": "medium",
+    "basedOnCyclesCount": 4,
+    "medicalDisclaimer": "This is an estimate based on your cycle patterns. Not medical advice. Consult healthcare provider for concerns."
+  }
+]
+```
+
+**Confidence Levels:**
+- `low`: < 3 cycles OR high variability
+- `medium`: 3-5 cycles, moderate variability
+- `high`: 6+ cycles, low variability
+
+**Note:** Fertility window predictions (`fertile_window`) are **always generated** alongside the next period prediction when enough cycle history is available.
+
+##### Generate predictions
+```http
+POST /api/cycle/predictions/generate
+Authorization: Bearer <your-jwt-token>
+```
+
+Triggers prediction calculation based on your cycle history. Requires at least 3 cycles logged.
+
+##### Dismiss a prediction
+```http
+DELETE /api/cycle/predictions/{id}
+Authorization: Bearer <your-jwt-token>
+```
+
+---
+
+#### Cycle Settings (Privacy-First)
+
+##### Get settings
+```http
+GET /api/cycle/settings
+Authorization: Bearer <your-jwt-token>
+```
+
+**Response:**
+```json
+{
+  "userId": 1,
+  "typicalCycleLength": 28,
+  "typicalPeriodLength": 5,
+  "trackingGoals": ["understand_patterns", "health_tracking"],
+  "enabledFeatures": {
+    "flow": true,
+    "pain": true,
+    "mood": true,
+    "energy": false,
+    "symptoms": true,
+    "body_signs": false
+  },
+  "customSymptoms": ["nausea", "dizziness"],
+  "customMoods": ["anxious", "calm"],
+  "showPredictions": true,
+  "showFertilityInfo": false,
+  "reminderEnabled": false,
+  "reminderTone": "gentle",
+  "privacyMode": "full",
+  "medicalConditions": ["PCOS"],
+  "hidePregnancyContent": false,
+  "gentleNotificationsOnly": true,
+  "createdAt": "2024-01-01T10:00:00",
+  "updatedAt": "2024-02-10T10:00:00"
+}
+```
+
+**Default Privacy Settings:**
+- Predictions: ON (but easily disabled)
+- Fertility info: **OFF (must explicitly opt-in)**
+- Reminders: OFF
+- Privacy mode: Full
+- Gentle notifications only
+
+##### Update settings
+```http
+PUT /api/cycle/settings
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "showFertilityInfo": true,
+  "customSymptoms": ["cramps", "fatigue", "bloating"],
+  "hidePregnancyContent": true
+}
+```
+
+**All fields optional** - only update what you want to change.
+
+##### Reset to defaults
+```http
+POST /api/cycle/settings/reset
+Authorization: Bearer <your-jwt-token>
+```
+
+Resets all settings to privacy-first defaults.
+
+---
+
+#### Key Features
+
+**Privacy-First Design:**
+- ✅ True deletion (no soft deletes on health data)
+- ✅ Opt-in for fertility tracking
+- ✅ Local storage option ready
+- ✅ Can hide pregnancy content (trauma-aware)
+- ✅ Gentle notification tone default
+
+**Flexible Tracking:**
+- ✅ All fields optional - track what matters to you
+- ✅ Support for irregular cycles (no 28-day assumption)
+- ✅ Easy editing anytime
+- ✅ Custom symptoms and moods
+- ✅ JSONB for maximum flexibility
+
+**Medical Condition Support:**
+- ✅ PCOS (irregular cycles, long cycles)
+- ✅ PMDD (detailed mood tracking)
+- ✅ Endometriosis (pain location tracking)
+
+**Conservative Predictions:**
+- ✅ Requires minimum 3 cycles
+- ✅ Confidence levels displayed
+- ✅ Medical disclaimers
+- ✅ Based on cycle count shown
+- ✅ Can be disabled entirely
+
+---
 
 #### Pregnancy Tracker
 
@@ -1409,7 +1932,10 @@ DELETE /api/trackers/pregnancy/progress/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Progress log deleted successfully" }
+```
 
 ##### Log kick count
 ```http
@@ -1467,7 +1993,10 @@ DELETE /api/trackers/pregnancy/kicks/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Kick count deleted successfully" }
+```
 
 ##### Log contraction
 ```http
@@ -1528,7 +2057,10 @@ DELETE /api/trackers/pregnancy/contractions/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Contraction log deleted successfully" }
+```
 
 #### Health Tracker
 
@@ -1585,7 +2117,10 @@ DELETE /api/trackers/health/mood/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Mood log deleted successfully" }
+```
 
 ##### Log water intake
 ```http
@@ -1609,13 +2144,34 @@ Content-Type: application/json
 }
 ```
 
-##### Get water intake history
+##### Get water intake history (aggregated by day)
 ```http
 GET /api/trackers/health/water
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** Array of water intake entries
+**Response:** Aggregated daily totals, ordered by date (newest first).
+```json
+[
+  {
+    "date": "2024-01-15",
+    "totalMl": 2500,
+    "logCount": 3
+  },
+  {
+    "date": "2024-01-14",
+    "totalMl": 1800,
+    "logCount": 2
+  }
+]
+```
+
+**Fields:**
+- `date` – Calendar day
+- `totalMl` – Sum of all water logged that day
+- `logCount` – Number of individual log entries that day
+
+**Note:** Individual logs can still be added (`POST /water`), edited (`PUT /water/{id}`), or deleted (`DELETE /water/{id}`) — the GET history simply aggregates them by day.
 
 ##### Update water intake
 ```http
@@ -1637,7 +2193,39 @@ DELETE /api/trackers/health/water/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Water log deleted successfully" }
+```
+
+##### Get today's water logs
+```http
+GET /api/trackers/health/water/today
+Authorization: Bearer <your-jwt-token>
+```
+
+Returns each individual water log entry for today (current server date), ordered **newest first**.
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "date": "2026-02-20",
+    "amountMl": 500,
+    "createdAt": "2026-02-20T08:30:00"
+  },
+  {
+    "id": 2,
+    "date": "2026-02-20",
+    "amountMl": 350,
+    "createdAt": "2026-02-20T12:15:00"
+  }
+]
+```
+
+**Note:** Returns `[]` if no water has been logged today.
+
 
 ##### Log sleep
 ```http
@@ -1695,7 +2283,10 @@ DELETE /api/trackers/health/sleep/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Sleep log deleted successfully" }
+```
 
 ##### Log weight
 ```http
@@ -1716,10 +2307,13 @@ Content-Type: application/json
   "id": 1,
   "date": "2024-01-15",
   "weightKg": 65.5,
+  "targetWeightKg": 63.0,
   "notes": "Weekly weight check",
   "createdAt": "2024-01-15T10:00:00"
 }
 ```
+
+**Note:** `targetWeightKg` is the user's saved goal weight — `null` if not set yet.
 
 ##### Get weight history
 ```http
@@ -1727,7 +2321,19 @@ GET /api/trackers/health/weight
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** Array of weight entries
+**Response:** Array of weight entries, each including `targetWeightKg`.
+```json
+[
+  {
+    "id": 1,
+    "date": "2024-01-15",
+    "weightKg": 65.5,
+    "targetWeightKg": 63.0,
+    "notes": "Weekly weight check",
+    "createdAt": "2024-01-15T10:00:00"
+  }
+]
+```
 
 ##### Update weight
 ```http
@@ -1750,7 +2356,46 @@ DELETE /api/trackers/health/weight/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Weight log deleted successfully" }
+```
+
+##### Set target weight
+```http
+PUT /api/trackers/health/weight/target
+Authorization: Bearer <your-jwt-token>
+Content-Type: application/json
+
+{
+  "targetWeightKg": 63.0
+}
+```
+
+**Response:**
+```json
+{
+  "targetWeightKg": 63.0,
+  "message": "Target weight updated successfully"
+}
+```
+
+##### Get target weight
+```http
+GET /api/trackers/health/weight/target
+Authorization: Bearer <your-jwt-token>
+```
+
+**Response:**
+```json
+{
+  "targetWeightKg": 63.0,
+  "message": "Target weight retrieved"
+}
+```
+
+**Note:** If no target has been set, `targetWeightKg` will be `null` and `message` will be `"No target weight set"`.
+
 
 ##### Log symptom
 ```http
@@ -1808,22 +2453,25 @@ DELETE /api/trackers/health/symptoms/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Symptom log deleted successfully" }
+```
 
 #### Baby Tracker
 
 ##### Log feeding
 ```http
-POST /api/trackers/baby/feeding
+POST  
 Authorization: Bearer <your-jwt-token>
 Content-Type: application/json
 
 {
-  "startTime": "2024-01-15T10:30:00",
-  "endTime": "2024-01-15T10:50:00",
-  "type": "breastfeeding",
+  "feedingTime": "2024-01-15T10:30:00",
+  "durationMinutes": 20,
+  "type": "BREAST",
   "amountMl": 0,
-  "side": "left",
+  "side": "LEFT",
   "notes": "Baby fed well"
 }
 ```
@@ -1832,25 +2480,78 @@ Content-Type: application/json
 ```json
 {
   "id": 1,
-  "startTime": "2024-01-15T10:30:00",
-  "endTime": "2024-01-15T10:50:00",
-  "type": "breastfeeding",
+  "feedingTime": "2024-01-15T10:30:00",
+  "durationMinutes": 20,
+  "type": "BREAST",
   "amountMl": 0,
-  "side": "left",
+  "side": "LEFT",
   "notes": "Baby fed well",
   "createdAt": "2024-01-15T10:50:00"
 }
 ```
 
-**Note:** For formula feeding, set `type` to `"formula"` and provide `amountMl`. For breastfeeding, `amountMl` can be 0.
+**Note:** For formula feeding, set `type` to `"BOTTLE"` and provide `amountMl`. For breastfeeding, `amountMl` can be 0.
 
-##### Get feeding history
+##### Get feeding summary
 ```http
-GET /api/trackers/baby/feeding
+GET /api/trackers/baby/feeding/summary
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** Array of feeding entries
+**Response:**
+```json
+{
+  "breastFeedingSessions": 12,
+  "formulaSessions": 5,
+  "lastSession": {
+    "id": 17,
+    "feedingTime": "2024-01-15T10:30:00",
+    "durationMinutes": 20,
+    "type": "BREAST",
+    "amountMl": 0,
+    "side": "LEFT",
+    "notes": "Baby fed well",
+    "createdAt": "2024-01-15T10:30:00"
+  }
+}
+```
+
+> `lastSession` is `null` if no feedings have been logged yet.
+
+##### Get feeding history
+```http
+GET /api/trackers/baby/feeding?page=0&size=20
+Authorization: Bearer <your-jwt-token>
+```
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `page` | int | `0` | Zero-based page number |
+| `size` | int | `20` | Number of entries per page |
+
+**Response:**
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "feedingTime": "2024-01-15T10:30:00",
+      "durationMinutes": 20,
+      "type": "BREAST",
+      "amountMl": 0,
+      "side": "LEFT",
+      "notes": "Baby fed well",
+      "createdAt": "2024-01-15T10:30:00"
+    }
+  ],
+  "totalElements": 42,
+  "totalPages": 3,
+  "number": 0,
+  "size": 20,
+  "first": true,
+  "last": false
+}
+```
 
 ##### Update feeding
 ```http
@@ -1859,9 +2560,9 @@ Authorization: Bearer <your-jwt-token>
 Content-Type: application/json
 
 {
-  "startTime": "2024-01-15T10:30:00",
-  "endTime": "2024-01-15T10:55:00",
-  "type": "formula",
+  "feedingTime": "2024-01-15T11:00:00",
+  "durationMinutes": 25,
+  "type": "BOTTLE",
   "amountMl": 120,
   "side": null,
   "notes": "Updated feeding log"
@@ -1876,7 +2577,10 @@ DELETE /api/trackers/baby/feeding/{id}
 Authorization: Bearer <your-jwt-token>
 ```
 
-**Response:** `204 No Content`
+**Response:**
+```json
+{ "message": "Feeding log deleted successfully" }
+```
 
 ## Database Schema
 
