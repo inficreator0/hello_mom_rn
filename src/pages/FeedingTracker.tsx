@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Switch } from "react-native";
 import { Baby, Utensils, Clock, Trash2, History as HistoryIcon, ChevronLeft, ChevronRight, Droplet, Star } from "lucide-react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { Card, CardContent } from "../components/ui/card";
 import { babyAPI, BabyFeedingResponse, FeedingSummary } from "../lib/api/baby";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import { formatLocalDate, formatLocalTime } from "../lib/utils/dateUtils";
 import * as Haptics from "expo-haptics";
@@ -466,6 +468,7 @@ export const FeedingTracker = () => {
     const [summary, setSummary] = useState<FeedingSummary | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     // Pagination state
     const [page, setPage] = useState(0);
@@ -479,7 +482,17 @@ export const FeedingTracker = () => {
 
     useEffect(() => {
         loadData();
+        loadNotifSettings();
     }, []);
+
+    const loadNotifSettings = async () => {
+        try {
+            const data = await notificationsAPI.getSettings();
+            setNotifSettings(data);
+        } catch (err) {
+            console.error("Failed to load notification settings", err);
+        }
+    };
 
     const loadData = async () => {
         try {
@@ -570,6 +583,19 @@ export const FeedingTracker = () => {
         ]);
     };
 
+    const toggleNotifications = async () => {
+        if (!notifSettings) return;
+        const newSettings = { ...notifSettings, enableFeedingReminders: !notifSettings.enableFeedingReminders };
+        setNotifSettings(newSettings);
+        try {
+            await notificationsAPI.updateSettings(newSettings);
+            showToast(`Feeding notifications ${newSettings.enableFeedingReminders ? 'enabled' : 'disabled'}`, "success");
+        } catch (e) {
+            showToast("Failed to update notifications", "error");
+            loadNotifSettings();
+        }
+    };
+
     const getGroupedHistory = () => {
         const groups: { [key: string]: BabyFeedingResponse[] } = {};
         history.forEach(log => {
@@ -598,9 +624,18 @@ export const FeedingTracker = () => {
 
     return (
         <PageContainer style={styles.container}>
-            <ScreenHeader title="Baby Feeding" />
+            <ScreenHeader
+                title="Feeding Tracker"
+                rightElement={
+                    <Switch
+                        value={notifSettings?.enableFeedingReminders}
+                        onValueChange={toggleNotifications}
+                        trackColor={{ true: "#f9a8d4", false: "#e2e8f0" }}
+                        thumbColor={notifSettings?.enableFeedingReminders ? "#ec4899" : "#ffffff"}
+                    />
+                }
+            />
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-
                 {/* Dashboard Summary */}
                 <Animated.View entering={FadeInDown.duration(600)}>
                     <View style={styles.dashboard}>

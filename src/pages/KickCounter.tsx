@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Switch } from "react-native";
 import { Footprints, History, Play, StopCircle, Trash2, Info } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { pregnancyAPI, KickCounterResponse } from "../lib/api/pregnancy";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import Animated, { FadeInDown, FadeInUp, useAnimatedStyle, withSpring, useSharedValue } from "react-native-reanimated";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,16 +20,27 @@ export const KickCounter = () => {
     const [elapsed, setElapsed] = useState(0);
     const [history, setHistory] = useState<KickCounterResponse[]>([]);
     const [loading, setLoading] = useState(true);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const scale = useSharedValue(1);
 
     useEffect(() => {
         loadHistory();
+        loadNotifSettings();
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
     }, []);
+
+    const loadNotifSettings = async () => {
+        try {
+            const data = await notificationsAPI.getSettings();
+            setNotifSettings(data);
+        } catch (err) {
+            console.error("Failed to load notification settings", err);
+        }
+    };
 
     const loadHistory = async () => {
         try {
@@ -111,13 +124,36 @@ export const KickCounter = () => {
         ]);
     };
 
+    const toggleNotifications = async () => {
+        if (!notifSettings) return;
+        const newSettings = { ...notifSettings, enablePregnancyTracker: !notifSettings.enablePregnancyTracker };
+        setNotifSettings(newSettings);
+        try {
+            await notificationsAPI.updateSettings(newSettings);
+            showToast(`Kick notifications ${newSettings.enablePregnancyTracker ? 'enabled' : 'disabled'}`, "success");
+        } catch (e) {
+            showToast("Failed to update notifications", "error");
+            loadNotifSettings();
+        }
+    };
+
     return (
         <PageContainer style={styles.container}>
-            <ScreenHeader title="Kick Counter" />
+            <ScreenHeader
+                title="Kick Counter"
+                rightElement={
+                    <Switch
+                        value={notifSettings?.enablePregnancyTracker}
+                        onValueChange={toggleNotifications}
+                        trackColor={{ true: "#ddd6fe", false: "#e2e8f0" }}
+                        thumbColor={notifSettings?.enablePregnancyTracker ? "#8b5cf6" : "#ffffff"}
+                    />
+                }
+            />
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
                 {/* Main Counter UI */}
-                <Animated.View entering={FadeInDown.duration(800)} style={styles.counterSection}>
+                <Animated.View entering={FadeInDown.duration(600).delay(100)} style={styles.counterSection}>
                     <LinearGradient
                         colors={['#fff', '#fff1f2']}
                         style={styles.counterCard}
@@ -224,7 +260,9 @@ export const KickCounter = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fcfcfd' },
-    content: { padding: 16 },
+    content: {
+        padding: 16,
+    },
     counterSection: { marginBottom: 24 },
     counterCard: {
         borderRadius: 40,
@@ -291,7 +329,7 @@ const styles = StyleSheet.create({
     sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b' },
     historyCount: { fontSize: 12, color: '#94a3b8', fontWeight: '600' },
     historyCard: { marginBottom: 12, borderRadius: 24, borderWidth: 1, borderColor: '#f1f5f9' },
-    cardContent: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 12},
+    cardContent: { flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: 12 },
     sessionInfo: { flex: 1.5 },
     sessionDate: { fontSize: 15, fontWeight: '700', color: '#1e293b' },
     sessionTime: { fontSize: 12, color: '#64748b', marginTop: 2 },

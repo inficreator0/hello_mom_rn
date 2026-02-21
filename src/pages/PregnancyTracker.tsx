@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Dimensions, TextInput, Alert, Modal } from "react-native";
-import { Baby, Footprints, Timer, TrendingUp, Plus, ChevronRight, Scale, Ruler, Trash2, Edit2, Calendar, Info } from "lucide-react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Dimensions, TextInput, Alert, Modal, Switch } from "react-native";
+import { Baby, Footprints, Timer, TrendingUp, Plus, ChevronRight, Scale, Ruler, Trash2, Edit2, Calendar, Info, Bell } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { pregnancyAPI, PregnancyProgressResponse } from "../lib/api/pregnancy";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { useNavigation } from "@react-navigation/native";
@@ -21,6 +23,7 @@ export const PregnancyTracker = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingEntry, setEditingEntry] = useState<PregnancyProgressResponse | null>(null);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     const [formData, setFormData] = useState({
         weekNumber: "",
@@ -31,18 +34,29 @@ export const PregnancyTracker = () => {
     });
 
     useEffect(() => {
-        loadData();
+        loadPregnancyData();
+        loadNotifSettings();
     }, []);
 
-    const loadData = async () => {
+    const loadPregnancyData = async () => {
         try {
             setIsLoading(true);
             const data = await pregnancyAPI.getProgressHistory();
             setProgress(data.sort((a, b) => b.weekNumber - a.weekNumber));
         } catch (e) {
-            showToast("Failed to load pregnancy data", "error");
+            showToast("Failed to load pregnancy history", "error");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const loadNotifSettings = async () => {
+        try {
+            const data = await notificationsAPI.getSettings();
+            setNotifSettings(data);
+        } catch (err) {
+            console.error("Failed to load notification settings", err);
+            showToast("Failed to load notification settings", "error");
         }
     };
 
@@ -69,7 +83,7 @@ export const PregnancyTracker = () => {
                 showToast("Progress logged", "success");
             }
             setIsDialogOpen(false);
-            loadData();
+            loadPregnancyData();
         } catch (e) {
             showToast("Failed to save progress", "error");
         }
@@ -83,7 +97,7 @@ export const PregnancyTracker = () => {
                     try {
                         await pregnancyAPI.deleteProgress(id);
                         showToast("Log deleted", "success");
-                        loadData();
+                        loadPregnancyData();
                     } catch (e) {
                         showToast("Failed to delete log", "error");
                     }
@@ -92,15 +106,39 @@ export const PregnancyTracker = () => {
         ]);
     };
 
+    const toggleNotifications = async () => {
+        if (!notifSettings) return;
+        const newSettings = { ...notifSettings, enablePregnancyTracker: !notifSettings.enablePregnancyTracker };
+        setNotifSettings(newSettings);
+        try {
+            await notificationsAPI.updateSettings(newSettings);
+            showToast(`Pregnancy notifications ${newSettings.enablePregnancyTracker ? 'enabled' : 'disabled'}`, "success");
+        } catch (e) {
+            showToast("Failed to update notifications", "error");
+            loadNotifSettings();
+        }
+    };
+
     const latest = progress[0];
 
     return (
         <PageContainer style={styles.container}>
-            <ScreenHeader title="Pregnancy Tracker" />
+            <ScreenHeader
+                title="Pregnancy Tracker"
+                rightElement={
+                    <Switch
+                        value={notifSettings?.enablePregnancyTracker}
+                        onValueChange={toggleNotifications}
+                        trackColor={{ true: "#f9a8d4", false: "#e2e8f0" }}
+                        thumbColor={notifSettings?.enablePregnancyTracker ? "#ec4899" : "#ffffff"}
+                    />
+                }
+            />
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
                 {/* Weekly Progress Overview */}
                 <Animated.View entering={FadeInDown.duration(600)}>
+
                     <Card style={styles.overviewCard}>
                         <View style={styles.overviewGradient} />
                         <CardContent style={styles.overviewContent}>
@@ -397,10 +435,9 @@ const styles = StyleSheet.create({
         marginTop: 32,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
         color: '#1e293b',
-        marginBottom: 16,
     },
     toolsGrid: {
         flexDirection: 'row',

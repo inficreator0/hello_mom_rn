@@ -53,6 +53,19 @@ export type CommunityCategory =
   | "Milestones"
   | "Others";
 
+export interface NotificationSettings {
+  enableEmail: boolean;
+  enablePush: boolean;
+  enableInApp: boolean;
+  enableCycleTracker: boolean;
+  enablePregnancyTracker: boolean;
+  enableBabyGrowthTracker: boolean;
+  enableWaterReminder: boolean;
+  enableSleepReminder: boolean;
+  enableMoodReminder: boolean;
+  enableFeedingReminders: boolean;
+}
+
 export interface User {
   id: string | number;
   email: string;
@@ -177,4 +190,21 @@ export interface Article {
   viewCount: number;
   isPublished: boolean;
   publishedAt: string;
+}
+
+export interface DoctorResponse {
+  id: number;
+  name: string;
+  specialization: string;
+  fees: number;
+  rating: number;
+  experienceYears: number;
+  numberOfConsultations: number;
+  languages: string;
+  phoneNumber: string;
+}
+
+export interface DoctorSummaryResponse {
+  totalDoctors: number;
+  totalSessions: number;
 }

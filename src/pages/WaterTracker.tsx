@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Switch } from "react-native";
 import { Droplets, Plus, History, Trash2, Info } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { healthAPI, WaterIntakeResponse, WaterIntakeDailyResponse } from "../lib/api/health";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import { toLocalTime, formatLocalTime } from "../lib/utils/dateUtils";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -19,10 +21,21 @@ export const WaterTracker = () => {
     const [todayLogs, setTodayLogs] = useState<WaterIntakeResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     useEffect(() => {
         loadHistory();
+        loadNotifSettings();
     }, []);
+
+    const loadNotifSettings = async () => {
+        try {
+            const data = await notificationsAPI.getSettings();
+            setNotifSettings(data);
+        } catch (err) {
+            console.error("Failed to load notification settings", err);
+        }
+    };
 
     const loadHistory = async () => {
         setIsLoading(true);
@@ -86,12 +99,36 @@ export const WaterTracker = () => {
         }
     };
 
+    const toggleNotifications = async () => {
+        if (!notifSettings) return;
+        const newSettings = { ...notifSettings, enableWaterReminder: !notifSettings.enableWaterReminder };
+        setNotifSettings(newSettings);
+        try {
+            await notificationsAPI.updateSettings(newSettings);
+            showToast(`Water notifications ${newSettings.enableWaterReminder ? 'enabled' : 'disabled'}`, "success");
+        } catch (e) {
+            showToast("Failed to update notifications", "error");
+            loadNotifSettings();
+        }
+    };
+
     return (
         <PageContainer style={styles.container}>
-            <ScreenHeader title="Water Tracker" />
+            <ScreenHeader
+                title="Water Tracker"
+                rightElement={
+                    <Switch
+                        value={notifSettings?.enableWaterReminder}
+                        onValueChange={toggleNotifications}
+                        trackColor={{ true: "#93c5fd", false: "#e2e8f0" }}
+                        thumbColor={notifSettings?.enableWaterReminder ? "#3b82f6" : "#ffffff"}
+                    />
+                }
+            />
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
                 <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.progressContainer}>
+
                     <View style={styles.glassContainer}>
                         <View style={[styles.waterLevel, { height: `${progress * 100}%` }]} />
                         <View style={styles.glassContent}>
@@ -234,7 +271,8 @@ const styles = StyleSheet.create({
     },
     progressContainer: {
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 24,
+        width: '100%',
     },
     glassContainer: {
         width: 200,

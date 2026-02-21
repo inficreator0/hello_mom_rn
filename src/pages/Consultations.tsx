@@ -8,6 +8,7 @@ import {
   Alert,
   StyleSheet,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
@@ -26,6 +27,8 @@ import {
   ChevronRight,
   CheckCircle,
 } from "lucide-react-native";
+import { doctorsAPI } from "../lib/api/doctors";
+import { DoctorResponse, DoctorSummaryResponse } from "../types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -164,6 +167,55 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 export const Consultations = () => {
   const [activeFilter, setActiveFilter] = useState<FilterKey>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [summary, setSummary] = useState<DoctorSummaryResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const [doctorsData, summaryData] = await Promise.all([
+        doctorsAPI.getAllDoctors(),
+        doctorsAPI.getSummary(),
+      ]);
+
+      const mappedDoctors: Doctor[] = doctorsData.map((d: DoctorResponse) => {
+        let category: string = "Gynecologist";
+        const spec = d.specialization.toLowerCase();
+        if (spec.includes("ped")) category = "Pediatrician";
+        else if (spec.includes("lact")) category = "Lactation";
+        else if (spec.includes("mental") || spec.includes("psych") || spec.includes("therapist")) category = "Mental Health";
+        else if (spec.includes("gyn") || spec.includes("obs")) category = "Gynecologist";
+
+        return {
+          id: d.id,
+          name: d.name,
+          specialization: d.specialization,
+          category: category,
+          experience: d.experienceYears,
+          consultations: d.numberOfConsultations,
+          rating: d.rating,
+          phone: d.phoneNumber,
+          avatar: `https://api.dicebear.com/8.x/avataaars/svg?seed=${d.name.replace(/\s/g, '')}`,
+          available: true,
+          nextSlot: "Available Now",
+          languages: d.languages.split(",").map((s) => s.trim()),
+          fee: `₹${d.fees}`,
+        };
+      });
+
+      setDoctors(mappedDoctors);
+      setSummary(summaryData);
+    } catch (error) {
+      console.error("Failed to fetch consultations data", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     let list = mockDoctors;
@@ -214,21 +266,27 @@ export const Consultations = () => {
           </View>
           <View style={styles.heroStats}>
             <View style={styles.heroStatItem}>
-              <Text style={styles.heroStatValue}>50+</Text>
+              <Text style={styles.heroStatValue}>{summary?.totalDoctors}+</Text>
               <Text style={styles.heroStatLabel}>Doctors</Text>
             </View>
             <View style={styles.heroDivider} />
-            <View style={styles.heroStatItem}>
+            {/* <View style={styles.heroStatItem}>
               <Text style={styles.heroStatValue}>4.8★</Text>
               <Text style={styles.heroStatLabel}>Avg Rating</Text>
-            </View>
+            </View> */}
             <View style={styles.heroDivider} />
             <View style={styles.heroStatItem}>
-              <Text style={styles.heroStatValue}>10K+</Text>
+              <Text style={styles.heroStatValue}>{summary ? `${(summary.totalSessions / 1000).toFixed(summary.totalSessions >= 1000 ? 1 : 0)}K` : "10K"}+</Text>
               <Text style={styles.heroStatLabel}>Sessions</Text>
             </View>
           </View>
         </Animated.View>
+
+        {isLoading && (
+          <View style={{ padding: 20 }}>
+            <ActivityIndicator color="#ec4899" />
+          </View>
+        )}
 
         {/* Search Bar */}
         <Animated.View entering={FadeInDown.delay(100).duration(500)} style={styles.searchContainer}>
@@ -279,7 +337,7 @@ export const Consultations = () => {
           {filtered.length === 0 ? (
             <View style={styles.emptyState}>
               <Stethoscope size={48} color="#cbd5e1" />
-              <Text style={styles.emptyText}>No experts found for "{searchQuery}"</Text>
+              <Text style={styles.emptyText}>No experts found</Text>
             </View>
           ) : (
             filtered.map((doctor, index) => {

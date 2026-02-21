@@ -21,6 +21,9 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "android": {
+        "buildType": "apk"
+      },
       "node": "20.19.4"
     }
   },

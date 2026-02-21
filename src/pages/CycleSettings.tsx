@@ -6,7 +6,8 @@ import { Button } from "../components/ui/button";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { cycleAPI } from "../lib/api/cycle";
-import { UserCycleSettings } from "../types";
+import { notificationsAPI } from "../lib/api/notifications";
+import { UserCycleSettings, NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import { Shield, Bell, Eye, Database, Heart, Settings as SettingsIcon, AlertTriangle } from "lucide-react-native";
 
@@ -16,6 +17,7 @@ const CycleSettings = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [settings, setSettings] = useState<UserCycleSettings | null>(null);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     useEffect(() => {
         loadSettings();
@@ -24,10 +26,14 @@ const CycleSettings = () => {
     const loadSettings = async () => {
         try {
             setIsLoading(true);
-            const data = await cycleAPI.getSettings();
-            setSettings(data);
+            const [cycleData, notifData] = await Promise.all([
+                cycleAPI.getSettings(),
+                notificationsAPI.getSettings()
+            ]);
+            setSettings(cycleData);
+            setNotifSettings(notifData);
         } catch (err) {
-            console.error("Failed to load cycle settings", err);
+            console.error("Failed to load settings", err);
             showToast("Failed to load settings", "error");
         } finally {
             setIsLoading(false);
@@ -44,6 +50,19 @@ const CycleSettings = () => {
             console.error("Failed to update settings", err);
             showToast("Failed to update settings", "error");
             loadSettings(); // Rollback
+        }
+    };
+
+    const handleUpdateNotif = async (updates: Partial<NotificationSettings>) => {
+        if (!notifSettings) return;
+        try {
+            const newSettings = { ...notifSettings, ...updates };
+            setNotifSettings(newSettings);
+            await notificationsAPI.updateSettings(newSettings);
+        } catch (err) {
+            console.error("Failed to update notification settings", err);
+            showToast("Failed to update notifications", "error");
+            loadSettings();
         }
     };
 
@@ -165,6 +184,21 @@ const CycleSettings = () => {
                         </View>
                     </CardHeader>
                     <CardContent style={styles.cardContent}>
+                        <View style={styles.settingRow}>
+                            <View style={styles.settingLabelContainer}>
+                                <Text style={styles.settingLabel}>In-App & Push Alerts</Text>
+                                <Text style={styles.settingSubLabel}>Receive system alerts for your cycle</Text>
+                            </View>
+                            <Switch
+                                value={notifSettings?.enableCycleTracker}
+                                onValueChange={(val) => handleUpdateNotif({ enableCycleTracker: val })}
+                                trackColor={{ true: "#c4b5fd", false: "#e2e8f0" }}
+                                thumbColor={notifSettings?.enableCycleTracker ? "#8b5cf6" : "#ffffff"}
+                            />
+                        </View>
+
+                        <View style={styles.divider} />
+
                         <View style={styles.settingRow}>
                             <View style={styles.settingLabelContainer}>
                                 <Text style={styles.settingLabel}>Cycle Reminders</Text>

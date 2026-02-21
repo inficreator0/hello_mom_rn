@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Text, ScrollView, Pressable, Alert, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, Alert, StyleSheet, ActivityIndicator, Switch } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Plus, ChevronLeft, ChevronRight, Calendar, TrendingUp, AlertCircle, Settings } from "lucide-react-native";
 import { Button } from "../components/ui/button";
@@ -13,6 +13,8 @@ import {
 import {
   cycleAPI,
 } from "../lib/api/cycle";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
@@ -93,6 +95,7 @@ export const PeriodTracker = () => {
   const [logs, setLogs] = useState<CycleDayLog[]>([]);
   const [predictions, setPredictions] = useState<CyclePrediction[]>([]);
   const [settings, setSettings] = useState<UserCycleSettings | null>(null);
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCalendarLoading, setIsCalendarLoading] = useState(false);
@@ -137,6 +140,7 @@ export const PeriodTracker = () => {
   useEffect(() => {
     // Load metadata on initial mount
     loadMetadata();
+    loadNotifSettings();
   }, []);
 
   useEffect(() => {
@@ -163,6 +167,29 @@ export const PeriodTracker = () => {
       setSettings(settingsData);
     } catch (e) {
       console.error("Failed to load cycle metadata", e);
+    }
+  };
+
+  const loadNotifSettings = async () => {
+    try {
+      const data = await notificationsAPI.getSettings();
+      setNotifSettings(data);
+    } catch (err) {
+      console.error("Failed to load notification settings", err);
+      showToast("Failed to load notifications", "error");
+    }
+  };
+
+  const toggleNotifications = async () => {
+    if (!notifSettings) return;
+    const newSettings = { ...notifSettings, enableCycleTracker: !notifSettings.enableCycleTracker };
+    setNotifSettings(newSettings);
+    try {
+      await notificationsAPI.updateSettings(newSettings);
+      showToast(`Cycle notifications ${newSettings.enableCycleTracker ? 'enabled' : 'disabled'}`, "success");
+    } catch (e) {
+      showToast("Failed to update notifications", "error");
+      loadNotifSettings();
     }
   };
 
@@ -223,6 +250,14 @@ export const PeriodTracker = () => {
     <PageContainer style={styles.container} edges={['top']}>
       <ScreenHeader
         title="Period Tracker"
+        rightElement={
+          <Switch
+            value={notifSettings?.enableCycleTracker}
+            onValueChange={toggleNotifications}
+            trackColor={{ true: "#f9a8d4", false: "#e2e8f0" }}
+            thumbColor={notifSettings?.enableCycleTracker ? "#ec4899" : "#ffffff"}
+          />
+        }
       />
 
       {isLoading ? (

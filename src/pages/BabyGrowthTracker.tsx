@@ -4,13 +4,15 @@ import { useNavigation } from "@react-navigation/native";
 import {
   Plus, Edit2, Trash2, Baby, TrendingUp, TrendingDown,
   Calendar, Info, Ruler, Brain, Sparkles, ChevronRight,
-  ChevronLeft, Award, Settings
+  ChevronLeft, Award, Settings, Bell
 } from "lucide-react-native";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useToast } from "../context/ToastContext";
 import { babyAPI, BabyGrowthResponse, BabyProfileResponse } from "../lib/api/baby";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { usePreferences } from "../context/PreferencesContext";
@@ -33,6 +35,7 @@ export const BabyGrowthTracker = () => {
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<BabyGrowthResponse | null>(null);
+  const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
   const [formData, setFormData] = useState({
     logDate: getISODateString(new Date()),
@@ -45,7 +48,17 @@ export const BabyGrowthTracker = () => {
   // Load babies on mount
   useEffect(() => {
     loadBabies();
+    loadNotifSettings();
   }, []);
+
+  const loadNotifSettings = async () => {
+    try {
+      const data = await notificationsAPI.getSettings();
+      setNotifSettings(data);
+    } catch (err) {
+      console.error("Failed to load notification settings", err);
+    }
+  };
 
   // Load growth history when baby changes
   useEffect(() => {
@@ -173,6 +186,19 @@ export const BabyGrowthTracker = () => {
   const heightChange = calculateChange(latest?.heightCm, previous?.heightCm);
   const headChange = calculateChange(latest?.headCircumferenceCm, previous?.headCircumferenceCm);
 
+  const toggleNotifications = async () => {
+    if (!notifSettings) return;
+    const newSettings = { ...notifSettings, enableBabyGrowthTracker: !notifSettings.enableBabyGrowthTracker };
+    setNotifSettings(newSettings);
+    try {
+      await notificationsAPI.updateSettings(newSettings);
+      showToast(`Baby notifications ${newSettings.enableBabyGrowthTracker ? 'enabled' : 'disabled'}`, "success");
+    } catch (e) {
+      showToast("Failed to update notifications", "error");
+      loadNotifSettings();
+    }
+  };
+
   if ((isLoading || isProvisioning) && babies.length === 0) {
     return (
       <PageContainer style={styles.container} edges={['top']}>
@@ -209,32 +235,43 @@ export const BabyGrowthTracker = () => {
     <PageContainer style={styles.container} edges={['top']}>
       <ScreenHeader
         title={"Baby's Growth"}
+        rightElement={
+          <Switch
+            value={notifSettings?.enableBabyGrowthTracker}
+            onValueChange={toggleNotifications}
+            trackColor={{ true: "#818cf8", false: "#e2e8f0" }}
+            thumbColor={notifSettings?.enableBabyGrowthTracker ? "#4f46e5" : "#ffffff"}
+          />
+        }
       />
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Luxe Header Card */}
-        <Animated.View entering={FadeInDown.duration(600)} style={styles.luxeHeaderCard}>
-          <LinearGradient
-            colors={['#4f46e5', '#818cf8']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.headerGradient}
-          />
-          <View style={styles.headerContent}>
-            <View style={styles.headerLeft}>
-              <Text style={styles.headerLabel}>ACTIVE TRACKING</Text>
-              <Text style={styles.headerBabyName}>{selectedBaby?.name}'s Journey</Text>
-              <View style={styles.headerBadge}>
-                <Sparkles size={12} color="#fff" />
-                <Text style={styles.headerBadgeText}>Elite Growth</Text>
+        <Animated.View entering={FadeInDown.duration(600).delay(200)}>
+
+          <Card style={styles.overviewCard}>
+            <LinearGradient
+              colors={['#4f46e5', '#818cf8']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.headerGradient}
+            />
+            <View style={styles.headerContent}>
+              <View style={styles.headerLeft}>
+                <Text style={styles.headerLabel}>ACTIVE TRACKING</Text>
+                <Text style={styles.headerBabyName}>{selectedBaby?.name}'s Journey</Text>
+                <View style={styles.headerBadge}>
+                  <Sparkles size={12} color="#fff" />
+                  <Text style={styles.headerBadgeText}>Elite Growth</Text>
+                </View>
+              </View>
+              <View style={styles.headerRight}>
+                <View style={styles.avatarCircle}>
+                  <Baby size={32} color="#4f46e5" />
+                </View>
               </View>
             </View>
-            <View style={styles.headerRight}>
-              <View style={styles.avatarCircle}>
-                <Baby size={32} color="#4f46e5" />
-              </View>
-            </View>
-          </View>
+          </Card>
         </Animated.View>
 
         {/* Stats Tiles - Dashboard Style */}
@@ -481,15 +518,15 @@ const styles = StyleSheet.create({
   babySelector: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   babySelectorText: { fontSize: 13, fontWeight: '700', color: '#4f46e5' },
 
-  luxeHeaderCard: {
-    height: 140,
+  overviewCard: {
     borderRadius: 30,
     overflow: 'hidden',
-    marginTop: 16,
     elevation: 8,
     shadowColor: '#4f46e5',
     shadowOpacity: 0.3,
     shadowRadius: 15,
+    height: 140,
+    marginTop: 16,
   },
   headerGradient: { ...StyleSheet.absoluteFillObject },
   headerContent: { flex: 1, flexDirection: 'row', padding: 24, alignItems: 'center', justifyContent: 'space-between' },
@@ -516,7 +553,12 @@ const styles = StyleSheet.create({
 
   // History
   historySection: { marginTop: 32 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionTitle: { fontSize: 18, fontWeight: '800', color: '#1e293b' },
   viewAllBtn: { padding: 6 },
   viewAllText: { fontSize: 13, color: '#4f46e5', fontWeight: '600' },
@@ -524,7 +566,7 @@ const styles = StyleSheet.create({
   logsList: { marginTop: 16, gap: 12 },
   luxeLogCard: { borderRadius: 24, borderWidth: 1, borderColor: '#f1f5f9' },
   logCardContent: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 16 },
-  logDateBox: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16, minWidth: 55},
+  logDateBox: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 16, minWidth: 55 },
   logDay: { fontSize: 18, fontWeight: '800', color: '#1e293b' },
   logMonth: { fontSize: 10, fontWeight: '700', color: '#64748b', textTransform: 'uppercase' },
   logMetricsBox: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },

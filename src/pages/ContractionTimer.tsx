@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Alert, Switch } from "react-native";
 import { Timer, History, Play, StopCircle, Trash2, Zap, AlertTriangle } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { pregnancyAPI, ContractionTimerResponse } from "../lib/api/pregnancy";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import Animated, { FadeInDown, FadeInUp, useAnimatedStyle, withSpring, useSharedValue } from "react-native-reanimated";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,16 +22,27 @@ export const ContractionTimer = () => {
     const [intensity, setIntensity] = useState<Intensity>("moderate");
     const [history, setHistory] = useState<ContractionTimerResponse[]>([]);
     const [loading, setLoading] = useState(true);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const scale = useSharedValue(1);
 
     useEffect(() => {
         loadHistory();
+        loadNotifSettings();
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
         };
     }, []);
+
+    const loadNotifSettings = async () => {
+        try {
+            const data = await notificationsAPI.getSettings();
+            setNotifSettings(data);
+        } catch (err) {
+            console.error("Failed to load notification settings", err);
+        }
+    };
 
     const loadHistory = async () => {
         try {
@@ -108,6 +121,19 @@ export const ContractionTimer = () => {
         ]);
     };
 
+    const toggleNotifications = async () => {
+        if (!notifSettings) return;
+        const newSettings = { ...notifSettings, enablePregnancyTracker: !notifSettings.enablePregnancyTracker };
+        setNotifSettings(newSettings);
+        try {
+            await notificationsAPI.updateSettings(newSettings);
+            showToast(`Contraction alerts ${newSettings.enablePregnancyTracker ? 'enabled' : 'disabled'}`, "success");
+        } catch (e) {
+            showToast("Failed to update notifications", "error");
+            loadNotifSettings();
+        }
+    };
+
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scale.value }],
     }));
@@ -127,7 +153,17 @@ export const ContractionTimer = () => {
 
     return (
         <PageContainer style={styles.container}>
-            <ScreenHeader title="Contraction Timer" />
+            <ScreenHeader
+                title="Contraction Timer"
+                rightElement={
+                    <Switch
+                        value={notifSettings?.enablePregnancyTracker}
+                        onValueChange={toggleNotifications}
+                        trackColor={{ true: "#ddd6fe", false: "#e2e8f0" }}
+                        thumbColor={notifSettings?.enablePregnancyTracker ? "#8b5cf6" : "#ffffff"}
+                    />
+                }
+            />
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
                 {/* Main Timer UI */}
@@ -259,8 +295,12 @@ export const ContractionTimer = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fcfcfd' },
-    content: { padding: 16 },
-    timerSection: { marginBottom: 24 },
+    content: {
+        padding: 16,
+    },
+    timerSection: {
+        marginBottom: 24
+    },
     timerCard: {
         borderRadius: 40,
         padding: 32,

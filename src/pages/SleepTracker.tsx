@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Alert, Platform, Dimensions } from "react-native";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Pressable, Alert, Platform, Dimensions, Switch } from "react-native";
 import { Moon, Sun, Star, Trash2, History, Plus, BedDouble, AlarmClock } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { healthAPI, SleepLogResponse } from "../lib/api/health";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import { toLocalTime, formatLocalDate, formatLocalTime } from "../lib/utils/dateUtils";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -134,12 +136,23 @@ export const SleepTracker = () => {
     const navigation = useNavigation<any>();
     const [history, setHistory] = useState<SleepLogResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     useFocusEffect(
         React.useCallback(() => {
             loadHistory();
+            loadNotifSettings();
         }, [])
     );
+
+    const loadNotifSettings = async () => {
+        try {
+            const data = await notificationsAPI.getSettings();
+            setNotifSettings(data);
+        } catch (err) {
+            console.error("Failed to load notification settings", err);
+        }
+    };
 
     const loadHistory = async () => {
         try {
@@ -172,10 +185,35 @@ export const SleepTracker = () => {
         ]);
     };
 
+    const toggleNotifications = async () => {
+        if (!notifSettings) return;
+        const newSettings = { ...notifSettings, enableSleepReminder: !notifSettings.enableSleepReminder };
+        setNotifSettings(newSettings);
+        try {
+            await notificationsAPI.updateSettings(newSettings);
+            showToast(`Sleep notifications ${newSettings.enableSleepReminder ? 'enabled' : 'disabled'}`, "success");
+        } catch (e) {
+            showToast("Failed to update notifications", "error");
+            loadNotifSettings();
+        }
+    };
+
     return (
         <PageContainer style={styles.container}>
-            <ScreenHeader title="Sleep Tracker" />
+            <ScreenHeader
+                title="Sleep Tracker"
+                rightElement={
+                    <Switch
+                        value={notifSettings?.enableSleepReminder}
+                        onValueChange={toggleNotifications}
+                        trackColor={{ true: "#c7d2fe", false: "#e2e8f0" }}
+                        thumbColor={notifSettings?.enableSleepReminder ? "#6366f1" : "#ffffff"}
+                    />
+                }
+            />
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+                <Animated.View entering={FadeInDown.duration(600)}>
+                </Animated.View>
 
                 <View style={styles.historySection}>
                     <SleepChart history={history} />

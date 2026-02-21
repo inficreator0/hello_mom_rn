@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { View, Text, ScrollView, Pressable, TextInput, Alert, StyleSheet, ActivityIndicator, Dimensions } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput, Alert, StyleSheet, ActivityIndicator, Dimensions, Switch } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Plus, Edit2, Trash2, Flame, TrendingUp, TrendingDown, Target, ChevronRight } from "lucide-react-native";
 import Svg, { Path, Circle, Line, Text as SvgText, Defs, LinearGradient, Stop } from "react-native-svg";
@@ -8,6 +8,8 @@ import { Card, CardContent } from "../components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { useToast } from "../context/ToastContext";
 import { healthAPI, WeightLogResponse } from "../lib/api/health";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -37,6 +39,7 @@ export const WeightTracker = () => {
     const [weightData, setWeightData] = useState<WeightData>({ entries: [] });
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     // Goal State
     const [goalWeight, setGoalWeight] = useState<string>("");
@@ -53,7 +56,17 @@ export const WeightTracker = () => {
     useEffect(() => {
         loadData();
         loadGoal();
+        loadNotifSettings();
     }, []);
+
+    const loadNotifSettings = async () => {
+        try {
+            const data = await notificationsAPI.getSettings();
+            setNotifSettings(data);
+        } catch (err) {
+            console.error("Failed to load notification settings", err);
+        }
+    };
 
     const loadGoal = async () => {
         try {
@@ -187,6 +200,8 @@ export const WeightTracker = () => {
             }
         ]);
     };
+
+
 
     const sortedEntries = useMemo(() => {
         return [...weightData.entries].sort((a, b) => b.date.localeCompare(a.date));
@@ -327,7 +342,9 @@ export const WeightTracker = () => {
 
     return (
         <PageContainer style={styles.container} edges={['top']}>
-            <ScreenHeader title="Weight Tracker" />
+            <ScreenHeader
+                title="Weight Tracker"
+            />
 
             {isLoading ? (
                 <View style={styles.loadingContainer}>
@@ -336,6 +353,7 @@ export const WeightTracker = () => {
                 </View>
             ) : (
                 <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+
                     {/* Goal Section */}
                     <Pressable onPress={() => { setGoalInput(goalWeight); setIsGoalDialogOpen(true); }}>
                         <Card style={styles.goalCard}>

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, TextInput } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Alert, TextInput, Switch } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { Smile, Frown, Meh, HeartPulse, Zap, Trash2, Calendar as CalendarIcon, Plus } from "lucide-react-native";
+import { Smile, Frown, Meh, HeartPulse, Zap, Trash2, Calendar as CalendarIcon, Plus, Bell } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { healthAPI, MoodLogResponse } from "../lib/api/health";
+import { notificationsAPI } from "../lib/api/notifications";
+import { NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import { formatLocalDate } from "../lib/utils/dateUtils";
 import Animated, { FadeInDown } from "react-native-reanimated";
@@ -27,10 +29,21 @@ export const MoodTracker = () => {
     const [selectedMood, setSelectedMood] = useState<string | null>(null);
     const [notes, setNotes] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
     useEffect(() => {
         loadHistory();
+        loadNotifSettings();
     }, []);
+
+    const loadNotifSettings = async () => {
+        try {
+            const data = await notificationsAPI.getSettings();
+            setNotifSettings(data);
+        } catch (err) {
+            console.error("Failed to load notification settings", err);
+        }
+    };
 
     const loadHistory = async () => {
         try {
@@ -93,12 +106,36 @@ export const MoodTracker = () => {
         ]);
     };
 
+    const toggleNotifications = async () => {
+        if (!notifSettings) return;
+        const newSettings = { ...notifSettings, enableMoodReminder: !notifSettings.enableMoodReminder };
+        setNotifSettings(newSettings);
+        try {
+            await notificationsAPI.updateSettings(newSettings);
+            showToast(`Mood notifications ${newSettings.enableMoodReminder ? 'enabled' : 'disabled'}`, "success");
+        } catch (e) {
+            showToast("Failed to update notifications", "error");
+            loadNotifSettings();
+        }
+    };
+
     return (
         <PageContainer style={styles.container}>
-            <ScreenHeader title="Mood Tracker" />
+            <ScreenHeader
+                title="Mood Tracker"
+                rightElement={
+                    <Switch
+                        value={notifSettings?.enableMoodReminder}
+                        onValueChange={toggleNotifications}
+                        trackColor={{ true: "#ddd6fe", false: "#e2e8f0" }}
+                        thumbColor={notifSettings?.enableMoodReminder ? "#8b5cf6" : "#ffffff"}
+                    />
+                }
+            />
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
                 <Animated.View entering={FadeInDown.duration(400)}>
+
                     <Card style={styles.inputCard}>
                         <CardContent style={styles.cardContent}>
                             <Text style={styles.sectionTitle}>How are you feeling today?</Text>
@@ -237,8 +274,11 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: '#1e293b',
-        marginBottom: 20,
-        textAlign: 'center',
+    },
+    iconButton: {
+        padding: 8,
+        borderRadius: 12,
+        backgroundColor: '#f8fafc',
     },
     moodGrid: {
         flexDirection: 'row',
