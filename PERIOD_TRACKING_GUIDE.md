@@ -57,10 +57,11 @@ We've built a comprehensive, privacy-first period tracking system that goes beyo
 2. **CyclePredictionController** - `/api/cycle/predictions/*`
 3. **UserCycleSettingsController** - `/api/cycle/settings/*`
 
-### New DTOs (5)
+### New DTOs (6)
 
 - CycleDayLogRequest/Response
 - CyclePredictionResponse
+- CyclePredictionSummaryResponse
 - UserCycleSettingsRequest/Response
 
 ---
@@ -320,26 +321,30 @@ Quickly log flow for today. Ideal for mobile quick-entry widgets.
 
 **Response:** `200 OK`
 ```json
-[
-  {
-    "id": 1,
-    "predictionType": "next_period",
-    "estimatedDate": "2024-03-05",
-    "estimatedEndDate": null,
-    "confidenceLevel": "medium",
-    "basedOnCyclesCount": 4,
-    "medicalDisclaimer": "This is an estimate based on your cycle patterns. Not medical advice. Consult healthcare provider for concerns."
-  },
-  {
-    "id": 2,
-    "predictionType": "fertile_window",
-    "estimatedDate": "2024-02-20",
-    "estimatedEndDate": "2024-02-26",
-    "confidenceLevel": "medium",
-    "basedOnCyclesCount": 4,
-    "medicalDisclaimer": "This is an estimate based on your cycle patterns. Not medical advice. Consult healthcare provider for concerns."
-  }
-]
+{
+  "averageCycleLength": 28,
+  "averagePeriodLength": 5,
+  "predictions": [
+    {
+      "id": 1,
+      "predictionType": "next_period",
+      "estimatedDate": "2024-03-05",
+      "estimatedEndDate": null,
+      "confidenceLevel": "medium",
+      "basedOnCyclesCount": 4,
+      "disclaimer": "This is an estimate based on your cycle patterns. Not medical advice. Consult healthcare provider for concerns."
+    },
+    {
+      "id": 2,
+      "predictionType": "fertile_window",
+      "estimatedDate": "2024-02-20",
+      "estimatedEndDate": "2024-02-26",
+      "confidenceLevel": "medium",
+      "basedOnCyclesCount": 4,
+      "disclaimer": "This is an estimate based on your cycle patterns. Not medical advice. Consult healthcare provider for concerns."
+    }
+  ]
+}
 ```
 
 **Confidence Levels:**

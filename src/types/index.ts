@@ -151,6 +151,12 @@ export interface CyclePrediction {
   medicalDisclaimer: string;
 }
 
+export interface PredictionsResponse {
+  predictions: CyclePrediction[];
+  averageCycleLength: number;
+  averagePeriodLength: number;
+}
+
 export interface UserCycleSettings {
   userId: number;
   typicalCycleLength?: number;

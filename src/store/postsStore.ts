@@ -11,7 +11,10 @@ interface PostsState {
   nextCursor: string | null;
   currentCategory: string | null;
   currentSort: "recent" | "upvotes";
+  isSearching: boolean;
+  searchQuery: string;
   refreshPosts: (category?: string, sort?: "recent" | "upvotes", forceRefresh?: boolean) => Promise<void>;
+  searchPosts: (query: string) => Promise<void>;
   loadMorePosts: () => Promise<void>;
   loadComments: (postId: string | number) => Promise<void>;
   getPostById: (id: string | number) => Post | undefined;
@@ -77,6 +80,8 @@ export const usePostsStore = create<PostsState>((set, get) => ({
   nextCursor: null,
   currentCategory: "All",
   currentSort: "recent", // Default sort
+  isSearching: false,
+  searchQuery: "",
 
   refreshPosts: async (category?: string, sort?: "recent" | "upvotes", forceRefresh = false) => {
     const { currentCategory, currentSort, posts, isLoading } = get();
@@ -99,7 +104,9 @@ export const usePostsStore = create<PostsState>((set, get) => ({
         // Only clear posts if filters changed (not on simple refresh)
         posts: effectiveCategory !== currentCategory || effectiveSort !== currentSort ? [] : posts,
         currentCategory: effectiveCategory || "All",
-        currentSort: effectiveSort
+        currentSort: effectiveSort,
+        isSearching: false,
+        searchQuery: "",
       });
 
       const response = await feedAPI.getFeedCursor({
@@ -127,26 +134,80 @@ export const usePostsStore = create<PostsState>((set, get) => ({
     }
   },
 
+  searchPosts: async (query: string) => {
+    const { isLoading, searchQuery } = get();
+
+    // Prevent redundant searches
+    if (isLoading || query === searchQuery && get().posts.length > 0) return;
+
+    if (!query.trim()) {
+      // If query is empty, revert to feed mode
+      set({ isSearching: false, searchQuery: "" });
+      await get().refreshPosts(undefined, undefined, true);
+      return;
+    }
+
+    try {
+      set({
+        isLoading: true,
+        posts: [], // Clear feed for new search
+        isSearching: true,
+        searchQuery: query,
+        nextCursor: null,
+        hasMore: true
+      });
+
+      const response = await postsAPI.search(query, undefined, 20);
+      const transformedPosts = response.data.map(transformPost);
+
+      set({
+        posts: transformedPosts,
+        hasLoaded: true,
+        nextCursor: response.nextCursor,
+        hasMore: !!response.nextCursor
+      });
+
+    } catch (error) {
+      console.error("Error searching posts:", error);
+      set({ posts: [] });
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   loadMorePosts: async () => {
-    const { nextCursor, hasMore, isLoading, posts, currentCategory, currentSort } = get();
+    const { nextCursor, hasMore, isLoading, posts, currentCategory, currentSort, isSearching, searchQuery } = get();
+
+    // Both feed and search use nextCursor for pagination now
     if (!hasMore || isLoading || !nextCursor) return;
 
     try {
       set({ isLoading: true });
 
-      const response = await feedAPI.getFeedCursor({
-        sort: currentSort, // Use current sort
-        category: currentCategory || undefined,
-        cursor: nextCursor
-      });
+      if (isSearching) {
+        const response = await postsAPI.search(searchQuery, nextCursor, 20);
+        const transformedNewPosts = response.data.map(transformPost);
 
-      const transformedNewPosts = response.content.map(transformPost);
+        set({
+          posts: [...posts, ...transformedNewPosts],
+          nextCursor: response.nextCursor,
+          hasMore: !!response.nextCursor
+        });
+      } else {
+        const response = await feedAPI.getFeedCursor({
+          sort: currentSort, // Use current sort
+          category: currentCategory || undefined,
+          cursor: nextCursor!
+        });
 
-      set({
-        posts: [...posts, ...transformedNewPosts],
-        nextCursor: response.nextCursor,
-        hasMore: response.hasNext
-      });
+        const transformedNewPosts = response.content.map(transformPost);
+
+        set({
+          posts: [...posts, ...transformedNewPosts],
+          nextCursor: response.nextCursor,
+          hasMore: response.hasNext
+        });
+      }
     } catch (error) {
       console.error("Error loading more posts:", error);
     } finally {

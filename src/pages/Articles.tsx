@@ -11,6 +11,7 @@ import { useToast } from "../context/ToastContext";
 import { useNavigation } from "@react-navigation/native";
 import { Share2 } from "lucide-react-native";
 import * as Linking from 'expo-linking';
+import { useDebounce } from "../hooks/useDebounce";
 
 const CATEGORIES = [
   "All",
@@ -26,50 +27,90 @@ const CATEGORIES = [
 export const Articles = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [page, setPage] = useState(0); // Using page for standard category pagination
+  const [hasMore, setHasMore] = useState(true);
+
   const { showToast } = useToast();
   const navigation = useNavigation<any>();
 
-  const fetchArticles = useCallback(async (category: string) => {
-    setIsLoading(true);
+  const fetchArticles = useCallback(async (
+    category: string,
+    query: string,
+    isLoadMore: boolean = false
+  ) => {
+    if (!isLoadMore) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
+
     try {
-      let response;
-      if (category === "All") {
-        response = await articlesAPI.getPublished(0, 50);
+      let mappedArticles: any[] = [];
+
+      if (query.trim()) {
+        const nextCursor = (isLoadMore && cursor) ? cursor : undefined;
+        const response = await articlesAPI.search(query, nextCursor, 10);
+
+        mappedArticles = response.data.map((item: any) => ({
+          ...item,
+          preview: item.summary,
+          image: item.featuredImageUrl,
+          readTime: "5 min read",
+        }));
+
+        setCursor(response.nextCursor);
+        setHasMore(!!response.nextCursor);
       } else {
-        response = await articlesAPI.getPublishedByCategory(category, 0, 50);
+        const pageNum = isLoadMore ? page + 1 : 0;
+        let response;
+        if (category === "All") {
+          response = await articlesAPI.getPublished(pageNum, 10);
+        } else {
+          response = await articlesAPI.getPublishedByCategory(category, pageNum, 10);
+        }
+
+        mappedArticles = response.content.map(item => ({
+          ...item,
+          preview: item.summary,
+          image: item.featuredImageUrl,
+          readTime: "5 min read",
+        }));
+
+        setPage(pageNum);
+        setHasMore(!response.last && response.content.length > 0);
       }
 
-      const mappedArticles = response.content.map(item => ({
-        ...item,
-        // Ensure properties exist for UI mapping
-        preview: item.summary,
-        image: item.featuredImageUrl,
-        readTime: "5 min read", // Mocking read time as backend doesn't provide it yet
-      }));
+      setArticles(prev => isLoadMore ? [...prev, ...mappedArticles] : mappedArticles);
 
-      setArticles(mappedArticles);
     } catch (error) {
       console.error("Failed to fetch articles:", error);
       showToast("Failed to load articles", "error");
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
-  }, [showToast]);
+  }, [showToast, cursor, page]);
 
   useEffect(() => {
-    fetchArticles(selectedCategory);
-  }, [selectedCategory, fetchArticles]);
+    // Reset state before initial fetch
+    setCursor(null);
+    setPage(0);
+    fetchArticles(selectedCategory, debouncedSearchQuery, false);
+  }, [selectedCategory, debouncedSearchQuery, fetchArticles]);
 
-  const filteredArticles = articles.filter((article) => {
-    const matchesSearch =
-      searchQuery === "" ||
-      article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      article.summary.toLowerCase().includes(searchQuery.toLowerCase());
+  const handleLoadMore = () => {
+    if (!isLoading && !isLoadingMore && hasMore) {
+      fetchArticles(selectedCategory, debouncedSearchQuery, true);
+    }
+  };
 
-    return matchesSearch;
-  });
+  // filteredArticles mapping removed because search logic is handled by backend API and the local articles list is accurate
 
   const handleShare = async (article: Article) => {
     try {
@@ -166,15 +207,30 @@ export const Articles = () => {
         </View>
       ) : (
         <FlatList
-          data={filteredArticles}
+          data={articles}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderArticle}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>No articles found.</Text>
+            <Text style={styles.emptyText}>
+              {searchQuery ? `No articles found for "${searchQuery}"` : "No articles found."}
+            </Text>
           }
-          onRefresh={() => fetchArticles(selectedCategory)}
+          onRefresh={() => {
+            setCursor(null);
+            setPage(0);
+            fetchArticles(selectedCategory, debouncedSearchQuery, false);
+          }}
           refreshing={isLoading}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={{ paddingVertical: 20 }}>
+                <ActivityIndicator size="small" color="#ec4899" />
+              </View>
+            ) : null
+          }
         />
       )}
     </PageContainer>

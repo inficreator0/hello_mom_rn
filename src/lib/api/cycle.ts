@@ -2,7 +2,8 @@ import { apiRequest } from "../http";
 import {
   CycleDayLog,
   CyclePrediction,
-  UserCycleSettings
+  UserCycleSettings,
+  PredictionsResponse
 } from "../../types";
 
 // ... existing interfaces ...
@@ -59,8 +60,8 @@ export const cycleAPI = {
   },
 
   // Cycle Predictions
-  getPredictions: async (): Promise<CyclePrediction[]> => {
-    return await apiRequest<CyclePrediction[]>("/cycle/predictions", {
+  getPredictions: async (): Promise<PredictionsResponse> => {
+    return await apiRequest<PredictionsResponse>("/cycle/predictions", {
       method: "GET",
     });
   },

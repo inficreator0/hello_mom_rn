@@ -13,6 +13,7 @@ export const articlesAPI = {
       totalPages: number;
       size: number;
       number: number;
+      last: boolean;
     }>(`/articles/published?page=${page}&size=${size}&sortBy=${sortBy}&sortDir=${sortDir}`);
   },
 
@@ -27,6 +28,7 @@ export const articlesAPI = {
       totalPages: number;
       size: number;
       number: number;
+      last: boolean;
     }>(`/articles/published/category/${encodeURIComponent(category)}?page=${page}&size=${size}`);
   },
 
@@ -34,6 +36,17 @@ export const articlesAPI = {
     return apiRequest<any>(
       `/articles/${id}?incrementView=${incrementView ? "true" : "false"}`
     );
+  },
+
+  search: async (q: string, cursor?: string, limit: number = 10) => {
+    let url = `/articles/search?q=${encodeURIComponent(q)}&limit=${limit}`;
+    if (cursor) {
+      url += `&cursor=${encodeURIComponent(cursor)}`;
+    }
+    return apiRequest<{
+      data: any[];
+      nextCursor: string | null;
+    }>(url);
   },
 };
 

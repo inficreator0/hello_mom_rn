@@ -14,7 +14,7 @@ import {
   cycleAPI,
 } from "../lib/api/cycle";
 import { notificationsAPI } from "../lib/api/notifications";
-import { NotificationSettings } from "../types";
+import { NotificationSettings, PredictionsResponse } from "../types";
 
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
@@ -94,6 +94,7 @@ export const PeriodTracker = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [logs, setLogs] = useState<CycleDayLog[]>([]);
   const [predictions, setPredictions] = useState<CyclePrediction[]>([]);
+  const [avgStats, setAvgStats] = useState<{ avgCycle: number; avgPeriod: number } | null>(null);
   const [settings, setSettings] = useState<UserCycleSettings | null>(null);
   const [notifSettings, setNotifSettings] = useState<NotificationSettings | null>(null);
 
@@ -155,15 +156,23 @@ export const PeriodTracker = () => {
   const loadMetadata = async () => {
     try {
       const [predictionsData, settingsData] = await Promise.all([
-        cycleAPI.getPredictions().catch(() => []),
+        cycleAPI.getPredictions().catch(() => null),
         cycleAPI.getSettings().catch(() => null)
       ]);
-      const predictionsWithNormalizedDates = (predictionsData || []).map((p: any) => ({
+
+      const preds = predictionsData?.predictions || [];
+      const predictionsWithNormalizedDates = preds.map((p: any) => ({
         ...p,
         estimatedDate: p.estimatedDate ? p.estimatedDate.split('T')[0] : '',
         estimatedEndDate: p.estimatedEndDate ? p.estimatedEndDate.split('T')[0] : undefined,
       }));
       setPredictions(predictionsWithNormalizedDates);
+      if (predictionsData) {
+        setAvgStats({
+          avgCycle: predictionsData.averageCycleLength,
+          avgPeriod: predictionsData.averagePeriodLength
+        });
+      }
       setSettings(settingsData);
     } catch (e) {
       console.error("Failed to load cycle metadata", e);
@@ -271,14 +280,14 @@ export const PeriodTracker = () => {
           <View style={styles.statsRow}>
             <Card style={styles.statsCard}>
               <CardContent style={styles.statsCardContent}>
-                <Text style={styles.statsLabel}>Cycle Length</Text>
-                <Text style={styles.statsValue}>{settings?.typicalCycleLength || '--'}d</Text>
+                <Text style={styles.statsLabel}>Avg Cycle</Text>
+                <Text style={styles.statsValue}>{avgStats?.avgCycle || settings?.typicalCycleLength || '--'}d</Text>
               </CardContent>
             </Card>
             <Card style={styles.statsCard}>
               <CardContent style={styles.statsCardContent}>
-                <Text style={styles.statsLabel}>Period Length</Text>
-                <Text style={styles.statsValue}>{settings?.typicalPeriodLength || '--'}d</Text>
+                <Text style={styles.statsLabel}>Avg Period</Text>
+                <Text style={styles.statsValue}>{avgStats?.avgPeriod || settings?.typicalPeriodLength || '--'}d</Text>
               </CardContent>
             </Card>
           </View>

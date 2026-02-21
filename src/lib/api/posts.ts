@@ -22,6 +22,18 @@ export const postsAPI = {
     return response;
   },
 
+  search: async (q: string, cursor?: string, limit: number = 20) => {
+    let url = `/posts/search?q=${encodeURIComponent(q)}&limit=${limit}`;
+    if (cursor) {
+      url += `&cursor=${encodeURIComponent(cursor)}`;
+    }
+    const response = await apiRequest<{
+      data: any[];
+      nextCursor: string | null;
+    }>(url);
+    return response;
+  },
+
   create: async (data: { title: string; content: string; category?: string; flair?: string }) => {
     const response = await apiRequest<any>("/posts", {
       method: "POST",

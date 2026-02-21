@@ -6,12 +6,12 @@ import { Post, PostFormData, CommunityCategory } from "../types";
 import SearchBar from "./common/SearchBar";
 import PostCard from "./common/PostCard";
 
-import CategoryTabs from "./common/CategoryTabs";
 import { usePostsStore, transformPost } from "../store/postsStore";
 import { postsAPI } from "../lib/api/posts";
 import { useToast } from "../context/ToastContext";
 import { PostCardSkeleton } from "./ui/skeleton";
 import { CommunityEmptyState } from "./common/CommunityEmptyState";
+import { useDebounce } from "../hooks/useDebounce";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FilterBottomSheet } from "./common/FilterBottomSheet";
 import { PageContainer } from "./common/PageContainer";
@@ -20,7 +20,20 @@ import { ScreenHeader } from "./common/ScreenHeader";
 const CATEGORIES: CommunityCategory[] = ["All", "Pregnancy", "Postpartum", "Feeding", "Sleep", "Mental Health", "Recovery", "Milestones"];
 
 const Community = () => {
-  const { posts, refreshPosts, isLoading, addPost, hasMore, loadMorePosts, currentCategory, currentSort, updatePost, removePost } = usePostsStore();
+  const {
+    posts,
+    refreshPosts,
+    searchPosts,
+    isLoading,
+    addPost,
+    hasMore,
+    loadMorePosts,
+    currentCategory,
+    currentSort,
+    updatePost,
+    removePost,
+    isSearching
+  } = usePostsStore();
   const { showToast } = useToast();
   const navigation = useNavigation<any>();
 
@@ -29,8 +42,9 @@ const Community = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 400);
 
-  // Sync with store and initial fetch on mount
+  // Initial fetch on mount
   useEffect(() => {
     if (currentCategory) setSelectedCategory(currentCategory as CommunityCategory);
     if (currentSort) setSelectedSort(currentSort);
@@ -38,9 +52,21 @@ const Community = () => {
     void refreshPosts(currentCategory || selectedCategory, currentSort || selectedSort);
   }, []);
 
+  // Handle triggered search queries
+  useEffect(() => {
+    if (debouncedSearchQuery.trim()) {
+      void searchPosts(debouncedSearchQuery);
+    } else if (isSearching) {
+      // Revert to feed explicitly if we were previously searching
+      void refreshPosts(selectedCategory, selectedSort, true);
+    }
+  }, [debouncedSearchQuery]);
+
   const handleApplyFilters = () => {
     setIsFilterOpen(false);
-    void refreshPosts(selectedCategory, selectedSort);
+    // Explicitly clearing search purely for UI synchronization on the local component
+    setSearchQuery("");
+    void refreshPosts(selectedCategory, selectedSort, true);
   };
 
   const handleVote = async (postId: string | number, voteType: "up" | "down") => {
@@ -148,13 +174,7 @@ const Community = () => {
     }
   };
 
-  const filteredPosts = useMemo(() => {
-    if (!searchQuery.trim()) return posts;
-    return posts.filter(post =>
-      post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [posts, searchQuery]);
+  // filteredPosts hook removed since we now use server-side search via `posts`
 
   const renderFooter = () => {
     if (!hasMore) return null;
@@ -186,11 +206,11 @@ const Community = () => {
             <PostCardSkeleton />
             <PostCardSkeleton />
           </View>
-        ) : filteredPosts.length === 0 ? (
-          <CommunityEmptyState onReset={() => { setSearchQuery(""); setSelectedCategory("All"); void refreshPosts("All", "recent"); }} />
+        ) : posts.length === 0 ? (
+          <CommunityEmptyState onReset={() => { setSearchQuery(""); setSelectedCategory("All"); void refreshPosts("All", "recent", true); }} />
         ) : (
           <FlatList
-            data={filteredPosts}
+            data={posts}
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
               <PostCard

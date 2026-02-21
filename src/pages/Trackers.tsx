@@ -157,7 +157,7 @@ export const Trackers = () => {
         healthAPI.getWaterHistory(),
         healthAPI.getMoodHistory(),
         healthAPI.getWeightHistory().catch(() => []),
-        cycleAPI.getPredictions().catch(() => []),
+        cycleAPI.getPredictions().catch(() => null),
         cycleAPI.getRecentLogs(7).catch(() => []),
         babyAPI.getFeedingHistory().catch(() => ({ content: [] })),
         pregnancyAPI.getProgressHistory().catch(() => []),
@@ -210,8 +210,9 @@ export const Trackers = () => {
       }
 
       // Format Cycle
-      if (cyclePredictions.length > 0) {
-        const next = cyclePredictions.find(p => p.predictionType === 'next_period');
+      const preds = (cyclePredictions as any)?.predictions || [];
+      if (preds.length > 0) {
+        const next = preds.find((p: any) => p.predictionType === 'next_period');
         if (next) {
           const daysTo = Math.ceil((toLocalTime(next.estimatedDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
           newData.cycle = daysTo > 0 ? `Period in ${daysTo} days` : 'Period expected today';

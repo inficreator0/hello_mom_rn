@@ -9,10 +9,11 @@ import {
   StyleSheet,
   TextInput,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
-import { SvgUri } from "react-native-svg";
+
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import {
   Phone,
@@ -48,6 +49,17 @@ interface Doctor {
   fee: string;
 }
 
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const DOCTOR_IMAGES = [
+  "https://images.unsplash.com/photo-1559839734-2b71f15367ef?q=80&w=256&h=256&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=256&h=256&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1594824476967-48c8b964273f?q=80&w=256&h=256&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=256&h=256&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1537368910025-700350fe46c7?q=80&w=256&h=256&auto=format&fit=crop",
+  "https://images.unsplash.com/photo-1651008376811-b90baee60c1f?q=80&w=256&h=256&auto=format&fit=crop",
+];
+
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const mockDoctors: Doctor[] = [
@@ -60,7 +72,7 @@ const mockDoctors: Doctor[] = [
     consultations: 1480,
     rating: 4.9,
     phone: "+91-9820012345",
-    avatar: "https://api.dicebear.com/8.x/avataaars/svg?seed=aditi",
+    avatar: DOCTOR_IMAGES[0],
     available: true,
     nextSlot: "Available Now",
     languages: ["English", "Hindi"],
@@ -75,7 +87,7 @@ const mockDoctors: Doctor[] = [
     consultations: 1120,
     rating: 4.8,
     phone: "+91-9830019999",
-    avatar: "https://api.dicebear.com/8.x/avataaars/svg?seed=rhea",
+    avatar: DOCTOR_IMAGES[1],
     available: false,
     nextSlot: "Next: 4:00 PM",
     languages: ["English", "Marathi"],
@@ -90,7 +102,7 @@ const mockDoctors: Doctor[] = [
     consultations: 860,
     rating: 4.9,
     phone: "+91-9811122233",
-    avatar: "https://api.dicebear.com/8.x/avataaars/svg?seed=meera",
+    avatar: DOCTOR_IMAGES[2],
     available: true,
     nextSlot: "Available Now",
     languages: ["English", "Malayalam"],
@@ -105,7 +117,7 @@ const mockDoctors: Doctor[] = [
     consultations: 1320,
     rating: 4.7,
     phone: "+91-9770098877",
-    avatar: "https://api.dicebear.com/8.x/avataaars/svg?seed=kavya",
+    avatar: DOCTOR_IMAGES[3],
     available: false,
     nextSlot: "Next: Tomorrow",
     languages: ["English", "Hindi"],
@@ -120,7 +132,7 @@ const mockDoctors: Doctor[] = [
     consultations: 2100,
     rating: 4.95,
     phone: "+91-9900011122",
-    avatar: "https://api.dicebear.com/8.x/avataaars/svg?seed=sunita",
+    avatar: DOCTOR_IMAGES[4],
     available: true,
     nextSlot: "Available Now",
     languages: ["English", "Telugu", "Kannada"],
@@ -135,7 +147,7 @@ const mockDoctors: Doctor[] = [
     consultations: 740,
     rating: 4.6,
     phone: "+91-9955544433",
-    avatar: "https://api.dicebear.com/8.x/avataaars/svg?seed=priya",
+    avatar: DOCTOR_IMAGES[5],
     available: false,
     nextSlot: "Next: 6:00 PM",
     languages: ["English", "Tamil"],
@@ -183,7 +195,7 @@ export const Consultations = () => {
         doctorsAPI.getSummary(),
       ]);
 
-      const mappedDoctors: Doctor[] = doctorsData.map((d: DoctorResponse) => {
+      const mappedDoctors: Doctor[] = doctorsData.map((d: DoctorResponse, index: number) => {
         let category: string = "Gynecologist";
         const spec = d.specialization.toLowerCase();
         if (spec.includes("ped")) category = "Pediatrician";
@@ -200,7 +212,7 @@ export const Consultations = () => {
           consultations: d.numberOfConsultations,
           rating: d.rating,
           phone: d.phoneNumber,
-          avatar: `https://api.dicebear.com/8.x/avataaars/svg?seed=${d.name.replace(/\s/g, '')}`,
+          avatar: DOCTOR_IMAGES[index % DOCTOR_IMAGES.length],
           available: true,
           nextSlot: "Available Now",
           languages: d.languages.split(",").map((s) => s.trim()),
@@ -218,7 +230,7 @@ export const Consultations = () => {
   };
 
   const filtered = useMemo(() => {
-    let list = mockDoctors;
+    let list = doctors;
     if (activeFilter !== "All") {
       list = list.filter((d) => d.category === activeFilter);
     }
@@ -352,10 +364,9 @@ export const Consultations = () => {
                   <View style={styles.cardTop}>
                     {/* Avatar */}
                     <View style={styles.avatarWrapper}>
-                      <SvgUri
-                        width="100%"
-                        height="100%"
-                        uri={doctor.avatar}
+                      <Image
+                        source={{ uri: doctor.avatar }}
+                        style={styles.avatarImage}
                       />
                       {/* Online dot */}
                       {doctor.available && <View style={styles.onlineDot} />}
@@ -581,6 +592,11 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fce7f3",
     position: "relative",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
   },
   onlineDot: {
     position: "absolute",
