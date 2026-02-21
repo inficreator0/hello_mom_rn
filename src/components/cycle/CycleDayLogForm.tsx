@@ -142,6 +142,11 @@ export const CycleDayLogForm: React.FC<CycleDayLogFormProps> = ({ date, initialL
 
     const handleSave = async () => {
         try {
+            const today = new Date().toISOString().split("T")[0];
+            if (log.logDate > today) {
+                showToast("Cannot log health data for a future date", "error");
+                return;
+            }
             setIsLoading(true);
             const savedLog = await cycleAPI.updateDailyLog(log);
             showToast("Log saved successfully", "success");

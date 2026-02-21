@@ -14,7 +14,7 @@ import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import MultiSelect from "../components/common/MultiSelect";
 
-const CATEGORIES: CommunityCategory[] = ["Pregnancy", "Postpartum", "Feeding", "Sleep", "Mental Health", "Recovery", "Milestones"];
+const CATEGORIES: CommunityCategory[] = ["Pregnancy", "Postpartum", "Feeding", "Sleep", "Mental Health", "Recovery", "Milestones", "Others"];
 
 const FLAIR_OPTIONS = [
     "Question",
@@ -49,7 +49,10 @@ const CreatePost = () => {
     };
 
     const handleSubmit = async () => {
-        if (!formData.title.trim() || !formData.content.trim()) return;
+        if (!formData.title.trim() || !formData.content.trim() || formData.category.length === 0) {
+            showToast("Please fill in all mandatory fields", "error");
+            return;
+        }
 
         setIsSubmitting(true);
         try {
@@ -81,7 +84,7 @@ const CreatePost = () => {
         }
     };
 
-    const isDisabled = isSubmitting || !formData.title.trim() || !formData.content.trim();
+    const isDisabled = isSubmitting || !formData.title.trim() || !formData.content.trim() || formData.category.length === 0;
 
     return (
         <PageContainer style={styles.container} edges={['top']}>
@@ -106,7 +109,7 @@ const CreatePost = () => {
 
                             <View style={styles.inputGroup}>
                                 <MultiSelect
-                                    label="Category"
+                                    label="Category *"
                                     options={CATEGORIES}
                                     selectedValues={formData.category}
                                     onSelectionChange={(values) => handleChange("category", values)}

@@ -9,17 +9,17 @@ import {
   Droplets,
   Calendar,
   BabyIcon,
-  Utensils,
   Ruler,
   Flame,
-  ChevronRight
+  ChevronRight,
+  Info
 } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { usePreferences } from "../context/PreferencesContext";
 import { healthAPI } from "../lib/api/health";
 import { cycleAPI } from "../lib/api/cycle";
-import { babyAPI } from "../lib/api/baby";
+import { babyAPI, BabyGrowthResponse, BabyProfileResponse } from "../lib/api/baby";
 import { pregnancyAPI } from '../lib/api/pregnancy';
 import { toLocalTime, formatLocalDate, formatRelativeTime } from '../lib/utils/dateUtils';
 import { useFocusEffect } from "@react-navigation/native";
@@ -111,20 +111,20 @@ const trackers: TrackerCard[] = [
     name: "Baby Growth",
     icon: Ruler,
     description: "Weight & height logs",
-    path: "BabyWeightTracker",
+    path: "BabyGrowthTracker",
     section: "baby",
     color: "#14b8a6", // Teal
     bg: "#f0fdfa",
   },
-  {
-    id: "meal",
-    name: "Baby Meal",
-    icon: Utensils,
-    description: "Solids intake (6m+)",
-    section: "baby",
-    color: "#10b981", // Emerald
-    bg: "#ecfdf5",
-  },
+  // {
+  //   id: "meal",
+  //   name: "Baby Meal",
+  //   icon: Utensils,
+  //   description: "Solids intake (6m+)",
+  //   section: "baby",
+  //   color: "#10b981", // Emerald
+  //   bg: "#ecfdf5",
+  // },
 ];
 
 export const Trackers = () => {
@@ -136,6 +136,10 @@ export const Trackers = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+
+      // Auto-generate predictions when landing on the page
+      await cycleAPI.generatePredictions().catch(e => console.error("Failed to generate predictions", e));
+
       const todayString = new Date().toISOString().split('T')[0];
 
       const [
@@ -146,7 +150,8 @@ export const Trackers = () => {
         cyclePredictions,
         recentCycleLogs,
         feedingHistory,
-        pregnancyHistory
+        pregnancyHistory,
+        growthDataResult
       ] = await Promise.all([
         healthAPI.getSleepHistory(),
         healthAPI.getWaterHistory(),
@@ -156,7 +161,17 @@ export const Trackers = () => {
         cycleAPI.getRecentLogs(7).catch(() => []),
         babyAPI.getFeedingHistory().catch(() => ({ content: [] })),
         pregnancyAPI.getProgressHistory().catch(() => []),
+        // Fetch growth for the first baby if exists
+        babyAPI.getBabies().then(async (bList) => {
+          if (bList.length > 0) {
+            const g = await babyAPI.getGrowthHistory(bList[0].id).catch(() => []);
+            return { growth: g, babies: bList };
+          }
+          return { growth: [], babies: bList };
+        }).catch(() => ({ growth: [], babies: [] })),
       ]);
+
+      const growthData = growthDataResult as { growth: BabyGrowthResponse[], babies: BabyProfileResponse[] };
 
       const newData: Record<string, string> = {};
 
@@ -216,6 +231,12 @@ export const Trackers = () => {
       if (pregnancyHistory.length > 0) {
         const last = pregnancyHistory[0];
         newData.pregnancy = `Week ${last.weekNumber}`;
+      }
+
+      // Format Growth
+      if (growthData.growth && growthData.growth.length > 0) {
+        const last = growthData.growth.sort((a, b) => b.logDate.localeCompare(a.logDate))[0];
+        newData.growth = `${last.weightKg || '--'}kg / ${last.heightCm || '--'}cm`;
       }
 
       setData(newData);
@@ -294,6 +315,15 @@ export const Trackers = () => {
             <>
               <Text style={[styles.sectionHeader, { marginTop: 12 }]}>Baby's Health</Text>
               {babyTrackers.map(renderTrackerItem)}
+
+              <View style={styles.infoSection}>
+                <View style={styles.infoIconContainer}>
+                  <Info size={14} color="#64748b" />
+                </View>
+                <Text style={styles.infoText}>
+                  Baby's health trackers are available only in baby mode. If you want to disable them, you can do it from your profile.
+                </Text>
+              </View>
             </>
           )}
         </View>
@@ -334,7 +364,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#64748b',
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: 0.5,
     marginTop: 24,
     marginBottom: 16,
     marginLeft: 4,
@@ -364,17 +394,15 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   trackerName: {
-    fontWeight: '900',
-    fontSize: 17,
+    fontWeight: '700',
+    fontSize: 16,
     color: '#0f172a',
-    letterSpacing: -0.5,
   },
   trackerDescription: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#64748b',
     marginTop: 1,
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: '500',
     letterSpacing: 0.2,
   },
   entrySection: {
@@ -387,7 +415,29 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   lastEntryText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
+  },
+  infoSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 20,
+    marginTop: -4,
+    marginBottom: 24,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  infoIconContainer: {
+    marginTop: 2,
+  },
+  infoText: {
+    fontSize: 11,
+    color: '#64748b',
+    flex: 1,
+    lineHeight: 16,
+    fontWeight: '400',
   },
 });

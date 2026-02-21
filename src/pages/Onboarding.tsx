@@ -8,6 +8,7 @@ import { AnimatedHeart } from "../components/ui/AnimatedHeart";
 import { usePreferences } from "../context/PreferencesContext";
 import { useAuth } from "../context/AuthContext";
 import { authAPI } from "../lib/api/auth";
+import { babyAPI } from "../lib/api/baby";
 import { PageContainer } from "../components/common/PageContainer";
 
 type Gender = "female" | "male" | "other" | "prefer_not_to_say";
@@ -68,6 +69,16 @@ export const Onboarding = () => {
         age: parseInt(age, 10),
         gender: gender ? genderMap[gender] : undefined
       });
+
+      // 1.5. If baby mode, create a baby profile on the backend
+      if (selectedPurpose === "baby") {
+        await babyAPI.createBaby({
+          name: babyName || "My Baby",
+          gender: "UNKNOWN", // Default to unknown during onboarding
+          // Note: Backend documentation doesn't specify how to use babyStage to set dates, 
+          // so we'll just set the name for now as the minimal requirement.
+        });
+      }
 
       // 2. Refresh AuthContext state
       setIsOnboarded(true);

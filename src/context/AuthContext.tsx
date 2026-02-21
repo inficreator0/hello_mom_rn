@@ -159,7 +159,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = async () => {
-    await storeLogout();
+    try {
+      await authAPI.logout();
+    } catch (error) {
+      console.error("Logout API call failed:", error);
+    } finally {
+      await storeLogout();
+    }
   };
 
   return (

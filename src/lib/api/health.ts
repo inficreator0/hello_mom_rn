@@ -44,6 +44,8 @@ export interface SleepLogResponse extends SleepLogRequest {
 export interface WeightLogRequest {
     date: string;
     weightKg: number;
+    height?: number;
+    headCircumference?: number;
     notes?: string;
 }
 

@@ -57,3 +57,21 @@ export const formatRelativeTime = (date: string | Date | number): string => {
 
     return formatLocalDate(localDate);
 };
+
+/**
+ * Returns a YYYY-MM-DD string for the local date of the given Date object,
+ * avoiding time zone shifts that occur with toISOString().
+ */
+export const getISODateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+/**
+ * Returns today's date as a YYYY-MM-DD string in local time.
+ */
+export const getTodayISODate = (): string => {
+    return getISODateString(new Date());
+};

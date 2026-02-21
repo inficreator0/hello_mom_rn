@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Dimensions } from "react-native";
-import { Baby, Footprints, Timer, TrendingUp, Plus, ChevronRight, Scale, Ruler } from "lucide-react-native";
+import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator, Dimensions, TextInput, Alert, Modal } from "react-native";
+import { Baby, Footprints, Timer, TrendingUp, Plus, ChevronRight, Scale, Ruler, Trash2, Edit2, Calendar, Info } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import { Card, CardContent } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { pregnancyAPI, PregnancyProgressResponse } from "../lib/api/pregnancy";
 import { useToast } from "../context/ToastContext";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 import { useNavigation } from "@react-navigation/native";
+import { getISODateString } from "../lib/utils/dateUtils";
 
 const { width } = Dimensions.get('window');
 
@@ -17,6 +19,16 @@ export const PregnancyTracker = () => {
     const { showToast } = useToast();
     const [progress, setProgress] = useState<PregnancyProgressResponse[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingEntry, setEditingEntry] = useState<PregnancyProgressResponse | null>(null);
+
+    const [formData, setFormData] = useState({
+        weekNumber: "",
+        weight: "",
+        bellySize: "",
+        date: getISODateString(new Date()),
+        notes: "",
+    });
 
     useEffect(() => {
         loadData();
@@ -32,6 +44,52 @@ export const PregnancyTracker = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleSubmit = async () => {
+        if (!formData.weekNumber || !formData.date) {
+            showToast("Week number and date are required", "error");
+            return;
+        }
+
+        const payload = {
+            weekNumber: parseInt(formData.weekNumber),
+            weight: formData.weight ? parseFloat(formData.weight) : undefined,
+            bellySize: formData.bellySize ? parseFloat(formData.bellySize) : undefined,
+            date: formData.date,
+            notes: formData.notes,
+        };
+
+        try {
+            if (editingEntry) {
+                await pregnancyAPI.updateProgress(editingEntry.id, payload);
+                showToast("Progress updated", "success");
+            } else {
+                await pregnancyAPI.logProgress(payload);
+                showToast("Progress logged", "success");
+            }
+            setIsDialogOpen(false);
+            loadData();
+        } catch (e) {
+            showToast("Failed to save progress", "error");
+        }
+    };
+
+    const handleDelete = (id: number) => {
+        Alert.alert("Delete Entry", "Are you sure you want to delete this week's log?", [
+            { text: "Cancel", style: "cancel" },
+            {
+                text: "Delete", style: "destructive", onPress: async () => {
+                    try {
+                        await pregnancyAPI.deleteProgress(id);
+                        showToast("Log deleted", "success");
+                        loadData();
+                    } catch (e) {
+                        showToast("Failed to delete log", "error");
+                    }
+                }
+            }
+        ]);
     };
 
     const latest = progress[0];
@@ -63,7 +121,17 @@ export const PregnancyTracker = () => {
                                     <Text style={styles.infoLabel}>Belly Size</Text>
                                 </View>
                             </View>
-                            <Button variant="outline" style={styles.updateBtn} onPress={() => {/* Add Log */ }}>
+                            <Button variant="outline" style={styles.updateBtn} onPress={() => {
+                                setEditingEntry(null);
+                                setFormData({
+                                    weekNumber: latest ? (latest.weekNumber + 1).toString() : "1",
+                                    weight: latest?.weight?.toString() || "",
+                                    bellySize: latest?.bellySize?.toString() || "",
+                                    date: getISODateString(new Date()),
+                                    notes: "",
+                                });
+                                setIsDialogOpen(true);
+                            }}>
                                 <Plus size={16} color="#ec4899" />
                                 <Text style={styles.updateBtnText}>Update Progress</Text>
                             </Button>
@@ -75,7 +143,7 @@ export const PregnancyTracker = () => {
                 <View style={styles.toolsSection}>
                     <Text style={styles.sectionTitle}>Essential Tools</Text>
                     <View style={styles.toolsGrid}>
-                        <Pressable style={styles.toolItem} onPress={() => {/* Nav to Kicks */ }}>
+                        <Pressable style={styles.toolItem} onPress={() => navigation.navigate("KickCounter")}>
                             <View style={[styles.toolIcon, { backgroundColor: '#fdf2f8' }]}>
                                 <Footprints size={28} color="#ec4899" />
                             </View>
@@ -83,7 +151,7 @@ export const PregnancyTracker = () => {
                             <Text style={styles.toolDesc}>Track baby's movements</Text>
                         </Pressable>
 
-                        <Pressable style={styles.toolItem} onPress={() => {/* Nav to Contractions */ }}>
+                        <Pressable style={styles.toolItem} onPress={() => navigation.navigate("ContractionTimer")}>
                             <View style={[styles.toolIcon, { backgroundColor: '#f0f9ff' }]}>
                                 <Timer size={28} color="#0ea5e9" />
                             </View>
@@ -97,7 +165,6 @@ export const PregnancyTracker = () => {
                 <View style={styles.historySection}>
                     <View style={styles.historyHeader}>
                         <Text style={styles.sectionTitle}>Weekly Log</Text>
-                        <Pressable><Text style={styles.viewAllText}>View All</Text></Pressable>
                     </View>
 
                     {isLoading ? (
@@ -108,7 +175,7 @@ export const PregnancyTracker = () => {
                             <Text style={styles.emptyText}>No progress logged yet.</Text>
                         </View>
                     ) : (
-                        progress.slice(0, 3).map((item, index) => (
+                        progress.slice(0, 5).map((item: PregnancyProgressResponse, index: number) => (
                             <Animated.View key={item.id} entering={FadeInRight.delay(index * 100)}>
                                 <Card style={styles.historyCard}>
                                     <CardContent style={styles.historyCardContent}>
@@ -121,7 +188,24 @@ export const PregnancyTracker = () => {
                                             <Text style={styles.historyStats}>Weight: {item.weight}kg • Belly: {item.bellySize}cm</Text>
                                             {item.notes && <Text style={styles.historyNotes} numberOfLines={1}>{item.notes}</Text>}
                                         </View>
-                                        <ChevronRight size={20} color="#cbd5e1" />
+                                        <View style={styles.historyActions}>
+                                            <Pressable style={styles.historyBtn} onPress={() => {
+                                                setEditingEntry(item);
+                                                setFormData({
+                                                    weekNumber: item.weekNumber.toString(),
+                                                    weight: item.weight?.toString() || "",
+                                                    bellySize: item.bellySize?.toString() || "",
+                                                    date: item.date,
+                                                    notes: item.notes || "",
+                                                });
+                                                setIsDialogOpen(true);
+                                            }}>
+                                                <Edit2 size={16} color="#64748b" />
+                                            </Pressable>
+                                            <Pressable style={styles.historyBtn} onPress={() => handleDelete(item.id)}>
+                                                <Trash2 size={16} color="#f43f5e" />
+                                            </Pressable>
+                                        </View>
                                     </CardContent>
                                 </Card>
                             </Animated.View>
@@ -129,6 +213,96 @@ export const PregnancyTracker = () => {
                     )}
                 </View>
             </ScrollView>
+
+            {/* Progress Dialog */}
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogContent onOpenChange={setIsDialogOpen} style={styles.luxeDialog}>
+                    <DialogHeader>
+                        <DialogTitle>{editingEntry ? "Edit Weekly Log" : "Log Weekly Progress"}</DialogTitle>
+                        <DialogDescription>Track your body changes as your baby grows.</DialogDescription>
+                    </DialogHeader>
+
+                    <ScrollView style={styles.dialogForm} showsVerticalScrollIndicator={false}>
+                        <View style={styles.inputGrid}>
+                            <View style={[styles.inputGroup, { flex: 1 }]}>
+                                <Text style={styles.luxeInputLabel}>Week #</Text>
+                                <View style={styles.luxeInputWrapper}>
+                                    <TextInput
+                                        style={styles.luxeInput}
+                                        value={formData.weekNumber}
+                                        keyboardType="numeric"
+                                        onChangeText={(t) => setFormData({ ...formData, weekNumber: t })}
+                                        placeholder="12"
+                                        placeholderTextColor="#94a3b8"
+                                    />
+                                </View>
+                            </View>
+                            <View style={[styles.inputGroup, { flex: 2 }]}>
+                                <Text style={styles.luxeInputLabel}>Date</Text>
+                                <View style={styles.luxeInputWrapper}>
+                                    <Calendar size={18} color="#94a3b8" />
+                                    <TextInput
+                                        style={styles.luxeInput}
+                                        value={formData.date}
+                                        onChangeText={(t) => setFormData({ ...formData, date: t })}
+                                        placeholder="YYYY-MM-DD"
+                                        placeholderTextColor="#94a3b8"
+                                    />
+                                </View>
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGrid}>
+                            <View style={[styles.inputGroup, { flex: 1 }]}>
+                                <Text style={styles.luxeInputLabel}>Weight (kg)</Text>
+                                <View style={styles.luxeInputWrapper}>
+                                    <Scale size={18} color="#94a3b8" />
+                                    <TextInput
+                                        style={styles.luxeInput}
+                                        value={formData.weight}
+                                        keyboardType="numeric"
+                                        onChangeText={(t) => setFormData({ ...formData, weight: t })}
+                                        placeholder="65.0"
+                                        placeholderTextColor="#94a3b8"
+                                    />
+                                </View>
+                            </View>
+                            <View style={[styles.inputGroup, { flex: 1 }]}>
+                                <Text style={styles.luxeInputLabel}>Belly (cm)</Text>
+                                <View style={styles.luxeInputWrapper}>
+                                    <Ruler size={18} color="#94a3b8" />
+                                    <TextInput
+                                        style={styles.luxeInput}
+                                        value={formData.bellySize}
+                                        keyboardType="numeric"
+                                        onChangeText={(t) => setFormData({ ...formData, bellySize: t })}
+                                        placeholder="85"
+                                        placeholderTextColor="#94a3b8"
+                                    />
+                                </View>
+                            </View>
+                        </View>
+
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.luxeInputLabel}>Notes / Feelings</Text>
+                            <View style={[styles.luxeInputWrapper, { alignItems: 'flex-start', paddingTop: 12 }]}>
+                                <TextInput
+                                    style={[styles.luxeInput, { height: 80, textAlignVertical: 'top' }]}
+                                    value={formData.notes}
+                                    multiline
+                                    onChangeText={(t) => setFormData({ ...formData, notes: t })}
+                                    placeholder="How are you feeling this week?"
+                                    placeholderTextColor="#94a3b8"
+                                />
+                            </View>
+                        </View>
+
+                        <Button style={styles.luxeSubmitBtn} onPress={handleSubmit}>
+                            {editingEntry ? "Update Entry" : "Save Progress"}
+                        </Button>
+                    </ScrollView>
+                </DialogContent>
+            </Dialog>
         </PageContainer>
     );
 };
@@ -167,7 +341,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 12,
+        marginTop: 16
     },
     weekNumber: {
         fontSize: 24,
@@ -222,7 +397,7 @@ const styles = StyleSheet.create({
         marginTop: 32,
     },
     sectionTitle: {
-        fontSize: 20,
+        fontSize: 16,
         fontWeight: 'bold',
         color: '#1e293b',
         marginBottom: 16,
@@ -287,6 +462,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
+        paddingTop: 12
     },
     historyWeek: {
         width: 50,
@@ -335,5 +511,23 @@ const styles = StyleSheet.create({
     emptyText: {
         color: '#94a3b8',
         marginTop: 12,
-    }
+    },
+    historyActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    historyBtn: {
+        padding: 8,
+        borderRadius: 12,
+        backgroundColor: '#f8fafc',
+    },
+    // Dialog
+    luxeDialog: { borderRadius: 32, padding: 24, width: '90%', alignSelf: 'center' },
+    dialogForm: { marginTop: 20 },
+    inputGroup: { marginBottom: 20 },
+    luxeInputLabel: { fontSize: 13, fontWeight: '700', color: '#1e293b', marginBottom: 8, marginLeft: 4 },
+    luxeInputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderRadius: 16, paddingHorizontal: 16, borderWidth: 1, borderColor: '#f1f5f9' },
+    luxeInput: { flex: 1, height: 50, fontSize: 15, color: '#1e293b', paddingLeft: 12 },
+    inputGrid: { flexDirection: 'row', gap: 12 },
+    luxeSubmitBtn: { height: 56, borderRadius: 20, backgroundColor: '#ec4899', marginTop: 12 },
 });

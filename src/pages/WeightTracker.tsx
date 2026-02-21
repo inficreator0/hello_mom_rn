@@ -11,6 +11,7 @@ import { healthAPI, WeightLogResponse } from "../lib/api/health";
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { getISODateString } from "../lib/utils/dateUtils";
 
 interface WeightEntry {
     id: string;
@@ -27,7 +28,7 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 const CHART_HEIGHT = 220;
 const CHART_PADDING = 20;
 
-const formatDate = (date: Date): string => date.toISOString().split("T")[0];
+const formatDate = getISODateString;
 const parseDate = (dateString: string): Date => new Date(dateString + "T00:00:00");
 
 export const WeightTracker = () => {

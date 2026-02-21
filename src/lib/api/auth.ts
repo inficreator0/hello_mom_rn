@@ -129,4 +129,16 @@ export const authAPI = {
       body: JSON.stringify({ email }),
     });
   },
+
+  getMe: async () => {
+    return await apiRequest<{
+      id: number;
+      username: string;
+      email: string;
+      firstName: string;
+      lastName: string;
+      createdAt: string;
+      updatedAt: string;
+    }>("/users/me", { method: "GET" });
+  },
 };

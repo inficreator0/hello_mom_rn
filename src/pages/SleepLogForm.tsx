@@ -142,10 +142,12 @@ export const SleepLogForm = () => {
                                 const newStart = new Date(startTime);
                                 newStart.setHours(sH, sM, 0, 0);
 
-                                const newEnd = new Date(endTime);
+                                // Always start by setting end time to the same day as the new start time
+                                const newEnd = new Date(newStart);
                                 newEnd.setHours(eH, eM, 0, 0);
 
-                                // Adjust end time if it wraps around to the next day
+                                // If the selected end time is chronologically before the start time, 
+                                // it must be on the next day (e.g., 10 PM to 7 AM)
                                 if (newEnd < newStart) {
                                     newEnd.setDate(newEnd.getDate() + 1);
                                 }

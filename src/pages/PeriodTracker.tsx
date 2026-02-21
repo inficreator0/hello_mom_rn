@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { View, Text, ScrollView, Pressable, Alert, StyleSheet, ActivityIndicator } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { Plus, ChevronLeft, ChevronRight, Calendar, TrendingUp, AlertCircle, Settings } from "lucide-react-native";
@@ -16,7 +16,8 @@ import {
 
 import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
-import Animated, { FadeInDown, FadeIn } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTiming, runOnJS } from "react-native-reanimated";
+import { getISODateString } from "../lib/utils/dateUtils";
 
 // Daily Log Form removed as it is now a separate screen
 
@@ -62,7 +63,7 @@ const getDaysInMonth = (date: Date) => {
   return { daysInMonth, startingDayOfWeek, year, month };
 };
 
-const formatDate = (date: Date): string => date.toISOString().split("T")[0];
+const formatDate = (date: Date) => getISODateString(date);
 const parseDate = (dateString: string): Date => new Date(dateString + "T00:00:00");
 
 export const PeriodTracker = () => {
@@ -74,11 +75,49 @@ export const PeriodTracker = () => {
   const [settings, setSettings] = useState<UserCycleSettings | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<string>(formatDate(new Date()));
+  const [isCalendarLoading, setIsCalendarLoading] = useState(false);
+  const isFirstLoad = useRef(true);
+  const slideAnim = useSharedValue(0);
+  const calendarOpacity = useSharedValue(1);
+
+  const calendarAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slideAnim.value }],
+    opacity: calendarOpacity.value,
+  }));
+
+  // Helper called on JS thread - Date objects cannot cross into the UI runtime
+  const setMonthByValues = (y: number, m: number) => {
+    setCurrentDate(new Date(y, m, 1));
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const slideOut = direction === 'next' ? -350 : 350;
+    const slideIn = direction === 'next' ? 350 : -350;
+    // Extract primitives BEFORE entering the Reanimated worklet
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    const newYear = direction === 'next' ? (m === 11 ? y + 1 : y) : (m === 0 ? y - 1 : y);
+    const newMonth = direction === 'next' ? (m + 1) % 12 : (m + 11) % 12;
+    slideAnim.value = withTiming(slideOut, { duration: 200 }, () => {
+      runOnJS(setMonthByValues)(newYear, newMonth);
+      slideAnim.value = slideIn;
+      slideAnim.value = withTiming(0, { duration: 200 });
+    });
+  };
 
   useEffect(() => {
-    loadLogs(currentDate);
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false;
+      loadLogs(currentDate, true);
+    } else {
+      loadLogs(currentDate, false);
+    }
   }, [currentDate]);
+
+  useEffect(() => {
+    // Load metadata on initial mount
+    loadMetadata();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
@@ -88,22 +127,29 @@ export const PeriodTracker = () => {
     return unsubscribe;
   }, [navigation, currentDate]);
 
+
   const loadMetadata = async () => {
     try {
       const [predictionsData, settingsData] = await Promise.all([
         cycleAPI.getPredictions().catch(() => []),
         cycleAPI.getSettings().catch(() => null)
       ]);
-      setPredictions(predictionsData || []);
+      const predictionsWithNormalizedDates = (predictionsData || []).map((p: any) => ({
+        ...p,
+        estimatedDate: p.estimatedDate ? p.estimatedDate.split('T')[0] : '',
+        estimatedEndDate: p.estimatedEndDate ? p.estimatedEndDate.split('T')[0] : undefined,
+      }));
+      setPredictions(predictionsWithNormalizedDates);
       setSettings(settingsData);
     } catch (e) {
       console.error("Failed to load cycle metadata", e);
     }
   };
 
-  const loadLogs = async (date: Date = currentDate) => {
+  const loadLogs = async (date: Date = currentDate, isInitial = false) => {
     try {
-      setIsLoading(true);
+      if (isInitial) setIsLoading(true);
+      else setIsCalendarLoading(true);
       const targetYear = date.getFullYear();
       const targetMonth = date.getMonth() + 1;
 
@@ -114,6 +160,7 @@ export const PeriodTracker = () => {
       showToast("Failed to load cycle data", "error");
     } finally {
       setIsLoading(false);
+      setIsCalendarLoading(false);
     }
   };
 
@@ -128,12 +175,15 @@ export const PeriodTracker = () => {
     if (log?.flowLevel === 'spotting') return "spotting";
 
     // Check for predictions
-    if (settings?.showPredictions) {
+    const showPredictions = settings?.showPredictions ?? true;
+    const showFertilityInfo = settings?.showFertilityInfo ?? true;
+
+    if (showPredictions) {
       const pred = predictions.find(p => p.estimatedDate === dateStr);
       if (pred?.predictionType === 'next_period') return "predicted";
       if (pred?.predictionType === 'ovulation') return "ovulation";
 
-      if (settings.showFertilityInfo) {
+      if (showFertilityInfo) {
         if (pred?.predictionType === 'fertile_window') return "fertile";
         // Check if date falls within any fertile window prediction range
         const withinFertile = predictions.some(p =>
@@ -147,25 +197,6 @@ export const PeriodTracker = () => {
     }
 
     return "normal";
-  };
-
-  const handleDeleteLog = async (date: string) => {
-    Alert.alert("Delete Log", "Permanently delete health data for this date?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await cycleAPI.deleteDailyLog(date);
-            showToast("Log deleted", "success");
-            loadLogs(currentDate);
-          } catch (error) {
-            showToast("Failed to delete log", "error");
-          }
-        }
-      }
-    ]);
   };
 
   return (
@@ -202,67 +233,85 @@ export const PeriodTracker = () => {
               <CardHeader style={styles.calendarHeader}>
                 <Text style={styles.calendarMonthTitle}>{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</Text>
                 <View style={styles.calendarNav}>
-                  <Pressable onPress={() => setCurrentDate(new Date(year, month - 1, 1))}>
-                    <ChevronLeft size={20} color="#0f172a" />
+                  <Pressable onPress={() => navigateMonth('prev')} hitSlop={20}>
+                    <ChevronLeft size={24} color="#0f172a" />
                   </Pressable>
-                  <Pressable onPress={() => setCurrentDate(new Date(year, month + 1, 1))}>
-                    <ChevronRight size={20} color="#0f172a" />
+                  <Pressable onPress={() => navigateMonth('next')} hitSlop={20}>
+                    <ChevronRight size={24} color="#0f172a" />
                   </Pressable>
                 </View>
               </CardHeader>
-              <CardContent style={styles.calendarContent}>
-                <View style={styles.weekLabels}>
-                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
-                    <Text key={d} style={styles.weekLabelText}>{d}</Text>
-                  ))}
-                </View>
-                <View style={styles.daysGrid}>
-                  {Array(startingDayOfWeek).fill(null).map((_, i) => (
-                    <View key={`empty-${i}`} style={styles.emptyDay} />
-                  ))}
-                  {Array(daysInMonth).fill(null).map((_, i) => {
-                    const day = i + 1;
-                    const status = getDayStatus(day);
-                    const dateStr = formatDate(new Date(year, month, day));
-                    const hasLog = logs.some(l => l.logDate === dateStr);
+              <CardContent style={[styles.calendarContent, { overflow: 'hidden' }]}>
+                <Animated.View style={calendarAnimatedStyle}>
+                  <View style={styles.weekLabels}>
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
+                      <Text key={d} style={styles.weekLabelText}>{d}</Text>
+                    ))}
+                  </View>
+                  <View style={styles.daysGrid}>
+                    {Array(startingDayOfWeek).fill(null).map((_, i) => (
+                      <View key={`empty-${i}`} style={styles.emptyDay} />
+                    ))}
+                    {Array(daysInMonth).fill(null).map((_, i) => {
+                      const day = i + 1;
+                      const status = getDayStatus(day);
+                      const dateStr = formatDate(new Date(year, month, day));
+                      const hasLog = logs.some(l => l.logDate === dateStr);
 
-                    return (
-                      <Pressable
-                        key={day}
-                        style={styles.dayWrapper}
-                        onPress={() => {
-                          navigation.navigate('DailyLog', { date: dateStr, initialLog: logs.find(l => l.logDate === dateStr) });
-                        }}
-                      >
-                        <View style={[
-                          styles.dayCircle,
-                          status === "period" ? styles.dayCirclePeriod :
-                            status === "spotting" ? styles.dayCircleSpotting :
-                              status === "fertile" ? styles.dayCircleFertile :
-                                status === "predicted" ? styles.dayCirclePredicted :
-                                  status === "ovulation" ? styles.dayCircleOvulation :
-                                    hasLog ? styles.dayCircleLogged : null
-                        ]}>
-                          <Text style={[
-                            styles.dayText,
-                            status === "period" ? styles.dayTextPeriod :
-                              status === "fertile" ? styles.dayTextFertile :
-                                status === "ovulation" ? styles.dayTextOvulation :
-                                  hasLog ? styles.dayTextLogged :
-                                    styles.dayTextNormal
-                          ]}>{day}</Text>
-                        </View>
-                      </Pressable>
-                    );
-                  })
-                  }
-                </View>
+                      return (
+                        <Pressable
+                          key={day}
+                          style={styles.dayWrapper}
+                          onPress={() => {
+                            const today = new Date().toISOString().split("T")[0];
+                            if (dateStr > today) {
+                              showToast("Cannot log health data for a future date", "error");
+                              return;
+                            }
+                            navigation.navigate('DailyLog', { date: dateStr, initialLog: logs.find(l => l.logDate === dateStr) });
+                          }}
+                        >
+                          <View style={[
+                            styles.dayCircle,
+                            status === "period" ? styles.dayCirclePeriod :
+                              status === "spotting" ? styles.dayCircleSpotting :
+                                status === "fertile" ? styles.dayCircleFertile :
+                                  status === "predicted" ? styles.dayCirclePredicted :
+                                    status === "ovulation" ? styles.dayCircleOvulation :
+                                      hasLog ? styles.dayCircleLogged : null,
+                            (dateStr > formatDate(new Date()) && status === "normal" && !hasLog) && styles.dayCircleDisabled
+                          ]}>
+                            <Text style={[
+                              styles.dayText,
+                              status === "period" ? styles.dayTextPeriod :
+                                status === "fertile" ? styles.dayTextFertile :
+                                  status === "ovulation" ? styles.dayTextOvulation :
+                                    hasLog ? styles.dayTextLogged :
+                                      styles.dayTextNormal,
+                              (dateStr > formatDate(new Date()) && status === "normal" && !hasLog) && styles.dayTextDisabled
+                            ]}>{day}</Text>
+                            {(status === "fertile" || status === "ovulation") && (
+                              <View style={[
+                                styles.fertileIndicator,
+                                status === "ovulation" && styles.ovulationIndicator
+                              ]} />
+                            )}
+                          </View>
+                        </Pressable>
+                      );
+                    })
+                    }
+
+                  </View>
+                </Animated.View>
+
+                {isCalendarLoading && (
+                  <View style={styles.calendarOverlay}>
+                    <ActivityIndicator color="#ec4899" />
+                  </View>
+                )}
 
                 <View style={styles.legendContainer}>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: "#fff", borderWidth: 1, borderColor: '#ec4899' }]} />
-                    <Text style={styles.legendText}>Daily Log</Text>
-                  </View>
                   <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: "#ec4899" }]} />
                     <Text style={styles.legendText}>Period</Text>
@@ -271,20 +320,20 @@ export const PeriodTracker = () => {
                     <View style={[styles.legendDot, { backgroundColor: "#fbcfe8" }]} />
                     <Text style={styles.legendText}>Spotting</Text>
                   </View>
-                  {settings?.showPredictions && (
+                  {(settings?.showPredictions ?? true) && (
                     <View style={styles.legendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: "#fce7f3", borderStyle: 'dashed', borderWidth: 1, borderColor: '#ec4899' }]} />
+                      <View style={[styles.legendDot, { backgroundColor: '#fdf2f8', borderWidth: 1.5, borderColor: '#ec4899', borderRadius: 5 }]} />
                       <Text style={styles.legendText}>Predicted</Text>
                     </View>
                   )}
-                  {settings?.showFertilityInfo && (
+                  {(settings?.showFertilityInfo ?? true) && (
                     <>
                       <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: "#8b5cf6" }]} />
+                        <View style={[styles.legendDot, { backgroundColor: '#f5f3ff', borderWidth: 1.5, borderColor: '#a78bfa', borderRadius: 5 }]} />
                         <Text style={styles.legendText}>Fertile</Text>
                       </View>
                       <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: "#10b981" }]} />
+                        <View style={[styles.legendDot, { backgroundColor: '#10b981', borderRadius: 5 }]} />
                         <Text style={styles.legendText}>Ovulation</Text>
                       </View>
                     </>
@@ -295,7 +344,7 @@ export const PeriodTracker = () => {
           </Animated.View>
 
           {/* Predictions Section */}
-          {settings?.showPredictions && (
+          {(settings?.showPredictions ?? true) && (
             <View style={styles.predictionSection}>
               <Text style={styles.sectionTitle}>Predictions</Text>
               {predictions.length === 0 ? (
@@ -329,10 +378,6 @@ export const PeriodTracker = () => {
                         </Text>
                       </View>
                     </View>
-                    <View style={styles.disclaimerContainer}>
-                      <AlertCircle size={14} color="#64748b" />
-                      <Text style={styles.disclaimerText}>{pred.medicalDisclaimer}</Text>
-                    </View>
                   </CardContent>
                 </Card>
               ))}
@@ -340,11 +385,15 @@ export const PeriodTracker = () => {
           )}
 
         </ScrollView>
-      )}
+      )
+      }
 
       {/* Floating Action Button */}
       <Pressable
-        onPress={() => navigation.navigate('DailyLog', { date: formatDate(new Date()) })}
+        onPress={() => {
+          const today = new Date().toISOString().split("T")[0];
+          navigation.navigate('DailyLog', { date: today });
+        }}
         style={({ pressed }) => [{
           position: 'absolute',
           bottom: 24,
@@ -365,7 +414,7 @@ export const PeriodTracker = () => {
       >
         <Plus size={28} color="white" />
       </Pressable>
-    </PageContainer>
+    </PageContainer >
   );
 };
 
@@ -442,6 +491,14 @@ const styles = StyleSheet.create({
   },
   calendarContent: {
     paddingBottom: 16,
+    position: 'relative',
+  },
+  calendarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+    zIndex: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   weekLabels: {
     flexDirection: 'row',
@@ -483,16 +540,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#fbcfe8',
   },
   dayCircleFertile: {
-    backgroundColor: '#8b5cf6',
+    backgroundColor: '#604eb8ff',
+    borderWidth: 1.5,
+    borderColor: '#a78bfa',
   },
   dayCircleOvulation: {
     backgroundColor: '#10b981',
   },
   dayCirclePredicted: {
-    backgroundColor: '#fce7f3',
-    borderWidth: 1,
+    backgroundColor: '#fdf2f8',
+    borderWidth: 1.5,
     borderColor: '#ec4899',
-    borderStyle: 'dashed',
   },
   dayText: {
     fontSize: 14,
@@ -503,8 +561,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   dayTextFertile: {
-    color: '#ffffff',
-    fontWeight: 'bold',
+    color: '#7c3aed',
+    fontWeight: '700',
   },
   dayTextOvulation: {
     color: '#ffffff',
@@ -512,6 +570,27 @@ const styles = StyleSheet.create({
   },
   dayTextNormal: {
     color: '#334155',
+  },
+  dayCircleDisabled: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    opacity: 0.3,
+  },
+  dayTextDisabled: {
+    color: '#4d4e50',
+    fontWeight: 'normal',
+  },
+  fertileIndicator: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#7c3aed',
+    marginTop: 1,
+    position: 'absolute',
+    bottom: 4,
+  },
+  ovulationIndicator: {
+    backgroundColor: '#ffffff',
   },
   legendContainer: {
     flexDirection: 'row',
@@ -551,7 +630,8 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   predictionCardContent: {
-    padding: 16,
+    padding: 12,
+    paddingTop: 12
   },
   predictionHeader: {
     flexDirection: 'row',

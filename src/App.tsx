@@ -24,7 +24,9 @@ import { ArticleDetail } from './pages/ArticleDetail';
 import { Onboarding } from './pages/Onboarding';
 import { PeriodTracker } from './pages/PeriodTracker';
 import CycleSettings from './pages/CycleSettings';
-import { BabyWeightTracker } from './pages/BabyWeightTracker';
+import { BabyGrowthTracker } from './pages/BabyGrowthTracker';
+import { KickCounter } from './pages/KickCounter';
+import { ContractionTimer } from './pages/ContractionTimer';
 import { ComingSoon } from './pages/ComingSoon';
 import { DailyLog } from './pages/DailyLog';
 import { MoodTracker } from './pages/MoodTracker';
@@ -224,7 +226,9 @@ const Navigation = () => {
               <Stack.Screen name="PeriodTracker" component={PeriodTracker} />
               <Stack.Screen name="DailyLog" component={DailyLog} />
               <Stack.Screen name="CycleSettings" component={CycleSettings} />
-              <Stack.Screen name="BabyWeightTracker" component={BabyWeightTracker} />
+              <Stack.Screen name="BabyGrowthTracker" component={BabyGrowthTracker} />
+              <Stack.Screen name="KickCounter" component={KickCounter} />
+              <Stack.Screen name="ContractionTimer" component={ContractionTimer} />
               <Stack.Screen name="MoodTracker" component={MoodTracker} />
               <Stack.Screen name="WaterTracker" component={WaterTracker} />
               <Stack.Screen name="SleepTracker" component={SleepTracker} />

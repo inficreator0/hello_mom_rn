@@ -50,7 +50,8 @@ export type CommunityCategory =
   | "Sleep"
   | "Mental Health"
   | "Recovery"
-  | "Milestones";
+  | "Milestones"
+  | "Others";
 
 export interface User {
   id: string | number;
