@@ -6,6 +6,7 @@ import { Button } from "../components/ui/button";
 import { Edit, Calendar, Baby, Sparkles } from "lucide-react-native";
 import PostCard from "../components/common/PostCard";
 import { useAuth } from "../context/AuthContext";
+import { authAPI } from "../lib/api/auth";
 import { postsAPI } from "../lib/api/posts";
 import { StatCardSkeleton, PostCardSkeleton } from "../components/ui/skeleton";
 import { usePreferences } from "../context/PreferencesContext";
@@ -30,6 +31,7 @@ const Profile = () => {
   );
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [meData, setMeData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"my-posts" | "saved-posts">("my-posts");
   const [myPosts, setMyPosts] = useState<Post[]>([]);
   const [bookmarks, setBookmarks] = useState<Post[]>([]);
@@ -43,9 +45,9 @@ const Profile = () => {
   const { showToast } = useToast();
 
   const user = {
-    name: authUser?.username || "User",
-    avatar: "https://api.dicebear.com/8.x/fun-emoji/svg?seed=mother",
-    joinedAt: "2024-01-10",
+    name: meData ? `${meData.firstName} ${meData.lastName}` : (authUser?.username || "User"),
+    avatar: meData ? `https://api.dicebear.com/8.x/fun-emoji/svg?seed=${meData.username}` : "https://api.dicebear.com/8.x/fun-emoji/svg?seed=mother",
+    joinedAt: meData?.createdAt || "2024-01-10",
   };
 
   const updateLocalPost = (postId: string | number, updates: Partial<Post>) => {
@@ -303,6 +305,19 @@ const Profile = () => {
       console.error("Error fetching stats:", error);
     }
   };
+
+  const fetchMe = async () => {
+    try {
+      const data = await authAPI.getMe();
+      setMeData(data);
+    } catch (error) {
+      console.error("Error fetching /me:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchMe();
+  }, []);
 
   useEffect(() => {
     if (authUser?.username) {

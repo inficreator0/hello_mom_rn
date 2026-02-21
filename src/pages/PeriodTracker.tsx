@@ -18,18 +18,38 @@ import { PageContainer } from "../components/common/PageContainer";
 import { ScreenHeader } from "../components/common/ScreenHeader";
 import Animated, { FadeInDown, FadeIn, useSharedValue, useAnimatedStyle, withTiming, runOnJS } from "react-native-reanimated";
 import { getISODateString } from "../lib/utils/dateUtils";
+import { Badge } from "../components/ui/badge";
+
+const CYCLE_COLORS = {
+  primary: '#ec4899',
+  period: '#ec4899',
+  spotting: '#e7a4c9ff',
+  fertile: '#604eb8ff',
+  ovulation: '#10b981',
+  predicted: '#e7a4c9ff',
+  logged: '#ec4899',
+  normal: '#0f172a',
+  muted: '#64748b',
+  border: '#f1f5f9',
+  bg: '#ffffff',
+  bgMuted: '#f8fafc',
+  disabled: '#4d4e50',
+  text: '#334155',
+  textMuted: '#94a3b8',
+  white: '#ffffff',
+};
 
 // Daily Log Form removed as it is now a separate screen
 
 const FLOW_INTENSITY_OPTIONS = [
   { value: 'light', label: 'Light', color: '#60a5fa' },
-  { value: 'medium', label: 'Medium', color: '#ec4899' },
+  { value: 'medium', label: 'Medium', color: CYCLE_COLORS.period },
   { value: 'heavy', label: 'Heavy', color: '#ef4444' },
   { value: 'very_heavy', label: 'Very Heavy', color: '#991b1b' },
 ];
 
 const MOOD_OPTIONS = [
-  { value: 'happy', label: '😊 Happy', color: '#10b981' },
+  { value: 'happy', label: '😊 Happy', color: CYCLE_COLORS.ovulation },
   { value: 'neutral', label: '😐 Neutral', color: '#6b7280' },
   { value: 'sad', label: '😢 Sad', color: '#3b82f6' },
   { value: 'irritable', label: '😠 Irritable', color: '#f59e0b' },
@@ -207,7 +227,7 @@ export const PeriodTracker = () => {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#ec4899" size="large" />
+          <ActivityIndicator color={CYCLE_COLORS.primary} size="large" />
           <Text style={styles.loadingText}>Privacy-First Tracking...</Text>
         </View>
       ) : (
@@ -286,8 +306,9 @@ export const PeriodTracker = () => {
                               status === "period" ? styles.dayTextPeriod :
                                 status === "fertile" ? styles.dayTextFertile :
                                   status === "ovulation" ? styles.dayTextOvulation :
-                                    hasLog ? styles.dayTextLogged :
-                                      styles.dayTextNormal,
+                                    status === "predicted" ? styles.dayTextPredicted :
+                                      hasLog ? styles.dayTextLogged :
+                                        styles.dayTextNormal,
                               (dateStr > formatDate(new Date()) && status === "normal" && !hasLog) && styles.dayTextDisabled
                             ]}>{day}</Text>
                             {(status === "fertile" || status === "ovulation") && (
@@ -307,33 +328,41 @@ export const PeriodTracker = () => {
 
                 {isCalendarLoading && (
                   <View style={styles.calendarOverlay}>
-                    <ActivityIndicator color="#ec4899" />
+                    <ActivityIndicator color={CYCLE_COLORS.primary} />
                   </View>
                 )}
 
                 <View style={styles.legendContainer}>
                   <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: "#ec4899" }]} />
+                    <View style={[styles.legendDot, { backgroundColor: CYCLE_COLORS.period }]} />
                     <Text style={styles.legendText}>Period</Text>
                   </View>
                   <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: "#fbcfe8" }]} />
+                    <View style={[styles.legendDot, { backgroundColor: CYCLE_COLORS.spotting }]} />
                     <Text style={styles.legendText}>Spotting</Text>
                   </View>
                   {(settings?.showPredictions ?? true) && (
                     <View style={styles.legendItem}>
-                      <View style={[styles.legendDot, { backgroundColor: '#fdf2f8', borderWidth: 1.5, borderColor: '#ec4899', borderRadius: 5 }]} />
+                      <View style={[styles.legendDot, {
+                        backgroundColor: 'transparent',
+                        borderWidth: 1.5,
+                        borderColor: CYCLE_COLORS.period,
+                        borderRadius: 5
+                      }]} />
                       <Text style={styles.legendText}>Predicted</Text>
                     </View>
                   )}
                   {(settings?.showFertilityInfo ?? true) && (
                     <>
                       <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: '#f5f3ff', borderWidth: 1.5, borderColor: '#a78bfa', borderRadius: 5 }]} />
+                        <View style={[styles.legendDot, {
+                          backgroundColor: CYCLE_COLORS.fertile,
+                          borderRadius: 5
+                        }]} />
                         <Text style={styles.legendText}>Fertile</Text>
                       </View>
                       <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: '#10b981', borderRadius: 5 }]} />
+                        <View style={[styles.legendDot, { backgroundColor: CYCLE_COLORS.ovulation, borderRadius: 5 }]} />
                         <Text style={styles.legendText}>Ovulation</Text>
                       </View>
                     </>
@@ -358,8 +387,8 @@ export const PeriodTracker = () => {
                     <View style={styles.predictionHeader}>
                       <View style={styles.predictionIcon}>
                         <Calendar size={20} color={
-                          pred.predictionType === 'next_period' ? "#ec4899" :
-                            pred.predictionType === 'ovulation' ? "#10b981" : "#8b5cf6"
+                          pred.predictionType === 'next_period' ? CYCLE_COLORS.period :
+                            pred.predictionType === 'ovulation' ? CYCLE_COLORS.ovulation : CYCLE_COLORS.fertile
                         } />
                       </View>
                       <View style={{ flex: 1 }}>
@@ -401,7 +430,7 @@ export const PeriodTracker = () => {
           width: 56,
           height: 56,
           borderRadius: 28,
-          backgroundColor: '#ec4899',
+          backgroundColor: CYCLE_COLORS.primary,
           alignItems: 'center',
           justifyContent: 'center',
           elevation: 5,
@@ -421,7 +450,7 @@ export const PeriodTracker = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: CYCLE_COLORS.bg,
   },
   loadingContainer: {
     flex: 1,
@@ -430,14 +459,14 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 16,
-    color: '#64748b',
+    color: CYCLE_COLORS.muted,
     fontSize: 14,
   },
   addIcon: {
     marginRight: 4,
   },
   buttonText: {
-    color: '#ffffff',
+    color: CYCLE_COLORS.white,
     fontWeight: 'bold',
     fontSize: 14,
   },
@@ -454,7 +483,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: CYCLE_COLORS.border,
   },
   statsCardContent: {
     alignItems: 'center',
@@ -462,13 +491,13 @@ const styles = StyleSheet.create({
   },
   statsLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: CYCLE_COLORS.muted,
     marginBottom: 4,
   },
   statsValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: CYCLE_COLORS.normal,
   },
   calendarContainer: {
     marginBottom: 24,
@@ -483,7 +512,7 @@ const styles = StyleSheet.create({
   calendarMonthTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: CYCLE_COLORS.normal,
   },
   calendarNav: {
     flexDirection: 'row',
@@ -508,7 +537,7 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
     fontSize: 11,
-    color: '#94a3b8',
+    color: CYCLE_COLORS.textMuted,
     fontWeight: '600',
   },
   daysGrid: {
@@ -534,42 +563,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayCirclePeriod: {
-    backgroundColor: '#ec4899',
+    backgroundColor: CYCLE_COLORS.period,
+    borderRadius: 20
   },
   dayCircleSpotting: {
-    backgroundColor: '#fbcfe8',
+    backgroundColor: CYCLE_COLORS.spotting,
+    borderRadius: 20
   },
   dayCircleFertile: {
-    backgroundColor: '#604eb8ff',
-    borderWidth: 1.5,
-    borderColor: '#a78bfa',
+    backgroundColor: CYCLE_COLORS.fertile,
+    borderRadius: 20
   },
   dayCircleOvulation: {
-    backgroundColor: '#10b981',
+    backgroundColor: CYCLE_COLORS.ovulation,
+    borderRadius: 20
   },
   dayCirclePredicted: {
-    backgroundColor: '#fdf2f8',
+    backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#ec4899',
+    borderColor: CYCLE_COLORS.period,
+    borderRadius: 20
   },
   dayText: {
     fontSize: 14,
     fontWeight: '500',
   },
   dayTextPeriod: {
-    color: '#ffffff',
+    color: CYCLE_COLORS.white,
     fontWeight: 'bold',
   },
   dayTextFertile: {
-    color: '#7c3aed',
-    fontWeight: '700',
+    color: '#eeecf0',
+    fontWeight: '500',
   },
   dayTextOvulation: {
-    color: '#ffffff',
+    color: CYCLE_COLORS.white,
     fontWeight: 'bold',
   },
+  dayTextPredicted: {
+    color: CYCLE_COLORS.period,
+    fontWeight: '700',
+  },
   dayTextNormal: {
-    color: '#334155',
+    color: CYCLE_COLORS.text,
   },
   dayCircleDisabled: {
     backgroundColor: 'transparent',
@@ -577,20 +613,20 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   dayTextDisabled: {
-    color: '#4d4e50',
+    color: CYCLE_COLORS.disabled,
     fontWeight: 'normal',
   },
   fertileIndicator: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#7c3aed',
+    backgroundColor: CYCLE_COLORS.fertile,
     marginTop: 1,
     position: 'absolute',
     bottom: 4,
   },
   ovulationIndicator: {
-    backgroundColor: '#ffffff',
+    backgroundColor: CYCLE_COLORS.white,
   },
   legendContainer: {
     flexDirection: 'row',
@@ -611,7 +647,7 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 12,
-    color: '#64748b',
+    color: CYCLE_COLORS.muted,
   },
   predictionSection: {
     marginBottom: 24,
@@ -626,7 +662,7 @@ const styles = StyleSheet.create({
   predictionCard: {
     marginBottom: 12,
     borderRadius: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: CYCLE_COLORS.bgMuted,
     borderWidth: 0,
   },
   predictionCardContent: {
@@ -641,11 +677,11 @@ const styles = StyleSheet.create({
   },
   dayCircleLogged: {
     borderWidth: 1.5,
-    borderColor: '#ec4899',
-    backgroundColor: '#fff',
+    borderColor: CYCLE_COLORS.logged,
+    backgroundColor: CYCLE_COLORS.white,
   },
   dayTextLogged: {
-    color: '#ec4899',
+    color: CYCLE_COLORS.logged,
     fontWeight: '700',
   },
   emptyPredictions: {
@@ -660,7 +696,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: CYCLE_COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -672,11 +708,11 @@ const styles = StyleSheet.create({
   predictionType: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0f172a',
+    color: CYCLE_COLORS.normal,
   },
   predictionDate: {
     fontSize: 13,
-    color: '#64748b',
+    color: CYCLE_COLORS.muted,
     marginTop: 2,
   },
   confidenceBadge: {
@@ -692,13 +728,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#ffffff',
+    backgroundColor: CYCLE_COLORS.white,
     padding: 8,
     borderRadius: 8,
   },
   disclaimerText: {
     fontSize: 11,
-    color: '#64748b',
+    color: CYCLE_COLORS.muted,
     flex: 1,
     fontStyle: 'italic',
   },
@@ -721,7 +757,7 @@ const styles = StyleSheet.create({
   historyDate: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0f172a',
+    color: CYCLE_COLORS.normal,
   },
   historyTags: {
     flexDirection: 'row',
@@ -736,7 +772,7 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#64748b',
+    color: CYCLE_COLORS.muted,
   },
   historyActions: {
     flexDirection: 'row',
@@ -744,13 +780,13 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     padding: 8,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: CYCLE_COLORS.border,
     borderRadius: 8,
   },
   emptyHistory: {
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#f8fafc',
+    backgroundColor: CYCLE_COLORS.bgMuted,
     borderRadius: 16,
     gap: 12,
   },
@@ -759,7 +795,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: CYCLE_COLORS.textMuted,
     textAlign: 'center',
   },
   dialogContent: {
