@@ -12,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Share2 } from "lucide-react-native";
 import * as Linking from 'expo-linking';
 import { useDebounce } from "../hooks/useDebounce";
+import { ArticleCardSkeleton } from "../components/ui/skeleton";
 
 const CATEGORIES = [
   "All",
@@ -201,9 +202,11 @@ export const Articles = () => {
         </ScrollView>
       </View>
 
-      {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ec4899" />
+      {isLoading && articles.length === 0 ? (
+        <View style={[styles.listContent, { paddingHorizontal: 16 }]}>
+          <ArticleCardSkeleton />
+          <ArticleCardSkeleton />
+          <ArticleCardSkeleton />
         </View>
       ) : (
         <FlatList
@@ -227,7 +230,7 @@ export const Articles = () => {
           ListFooterComponent={
             isLoadingMore ? (
               <View style={{ paddingVertical: 20 }}>
-                <ActivityIndicator size="small" color="#ec4899" />
+                <ArticleCardSkeleton />
               </View>
             ) : null
           }

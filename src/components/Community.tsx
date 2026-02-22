@@ -179,8 +179,8 @@ const Community = () => {
   const renderFooter = () => {
     if (!hasMore) return null;
     return (
-      <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-        {isLoading ? <ActivityIndicator color="#ec4899" /> : null}
+      <View style={{ paddingVertical: 20 }}>
+        {isLoading ? <PostCardSkeleton /> : null}
       </View>
     );
   };

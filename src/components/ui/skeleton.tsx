@@ -1,36 +1,45 @@
 import * as React from "react"
-import { View, Animated, Easing, StyleSheet, ViewStyle } from "react-native"
+import { View, Animated, Easing, StyleSheet, ViewStyle, Dimensions } from "react-native"
+import { LinearGradient } from "expo-linear-gradient"
+
+const { width } = Dimensions.get("window");
 
 function Skeleton({
     style,
     ...props
 }: { style?: ViewStyle | ViewStyle[] }) {
-    const pulseAnim = React.useRef(new Animated.Value(0.4)).current
+    const shimmerAnim = React.useRef(new Animated.Value(0)).current
 
     React.useEffect(() => {
-        const pulse = Animated.sequence([
-            Animated.timing(pulseAnim, {
+        const shimmer = Animated.loop(
+            Animated.timing(shimmerAnim, {
                 toValue: 1,
                 duration: 1000,
-                easing: Easing.inOut(Easing.ease),
+                easing: Easing.linear,
                 useNativeDriver: true,
-            }),
-            Animated.timing(pulseAnim, {
-                toValue: 0.4,
-                duration: 1000,
-                easing: Easing.inOut(Easing.ease),
-                useNativeDriver: true,
-            }),
-        ])
+            })
+        )
+        shimmer.start()
 
-        Animated.loop(pulse).start()
+        return () => shimmer.stop()
     }, [])
 
+    const translateX = shimmerAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-width, width],
+    })
+
     return (
-        <Animated.View
-            style={[styles.skeleton, { opacity: pulseAnim }, style]}
-            {...props}
-        />
+        <View style={[styles.skeleton, style, { overflow: 'hidden' }]} {...props}>
+            <Animated.View style={{ ...StyleSheet.absoluteFillObject, transform: [{ translateX }] }}>
+                <LinearGradient
+                    colors={['transparent', 'rgba(255,255,255,0.5)', 'transparent']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={{ flex: 1 }}
+                />
+            </Animated.View>
+        </View>
     )
 }
 
@@ -78,6 +87,31 @@ function ProfileCardSkeleton() {
             <View style={{ gap: 8, marginTop: 8 }}>
                 <Skeleton style={{ height: 16, width: '100%' }} />
                 <Skeleton style={{ height: 16, width: '80%' }} />
+            </View>
+        </View>
+    )
+}
+
+function ArticleCardSkeleton() {
+    return (
+        <View style={styles.postCard}>
+            {/* Image Placeholder */}
+            <Skeleton style={{ height: 160, width: '100%', borderRadius: 8, marginBottom: 16 }} />
+
+            {/* Title and Meta */}
+            <Skeleton style={{ height: 20, width: '85%', marginBottom: 8 }} />
+            <Skeleton style={{ height: 12, width: '40%', marginBottom: 16 }} />
+
+            {/* Summary preview lines */}
+            <View style={{ gap: 8, marginBottom: 16 }}>
+                <Skeleton style={{ height: 14, width: '100%' }} />
+                <Skeleton style={{ height: 14, width: '90%' }} />
+            </View>
+
+            {/* Actions row */}
+            <View style={[styles.flexRowCenter, { justifyContent: 'space-between', marginTop: 'auto' }]}>
+                <Skeleton style={{ height: 40, flex: 1, marginRight: 8, borderRadius: 6 }} />
+                <Skeleton style={{ height: 40, width: 40, borderRadius: 6 }} />
             </View>
         </View>
     )
@@ -135,4 +169,4 @@ const styles = StyleSheet.create({
     },
 })
 
-export { Skeleton, StatCardSkeleton, PostCardSkeleton, ProfileCardSkeleton }
+export { Skeleton, StatCardSkeleton, PostCardSkeleton, ProfileCardSkeleton, ArticleCardSkeleton }
