@@ -25,7 +25,8 @@
       },
       "useNextNotificationsApi": true,
       "googleServicesFile": "./google-services.json",
-      "package": "com.nova",
+      "package": "com.offclockengineers.nova",
+      "versionCode": 1,
       "intentFilters": [
         {
           "action": "VIEW",
