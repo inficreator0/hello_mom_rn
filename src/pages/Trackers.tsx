@@ -141,6 +141,9 @@ export const Trackers = () => {
       await cycleAPI.generatePredictions().catch(e => console.error("Failed to generate predictions", e));
 
       const todayString = new Date().toISOString().split('T')[0];
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayString = yesterday.toISOString().split('T')[0];
 
       const [
         sleepHistory,
@@ -175,15 +178,18 @@ export const Trackers = () => {
 
       const newData: Record<string, string> = {};
 
-      // Format Sleep
+      // Format Sleep — only show if from last night (yesterday)
       if (sleepHistory.length > 0) {
         const last = sleepHistory[0];
-        const start = toLocalTime(last.startTime);
         const end = toLocalTime(last.endTime);
-        const diffMins = Math.floor((end.getTime() - start.getTime()) / 60000);
-        const h = Math.floor(diffMins / 60);
-        const m = diffMins % 60;
-        newData.sleep = `${h}h ${m}m last night`;
+        const endDateString = end.toISOString().split('T')[0];
+        if (endDateString === todayString || endDateString === yesterdayString) {
+          const start = toLocalTime(last.startTime);
+          const diffMins = Math.floor((end.getTime() - start.getTime()) / 60000);
+          const h = Math.floor(diffMins / 60);
+          const m = diffMins % 60;
+          newData.sleep = `${h}h ${m}m last night`;
+        }
       }
 
       // Format Water
@@ -192,8 +198,10 @@ export const Trackers = () => {
         newData.water = `${(todayWater.totalMl / 1000).toFixed(1)}L today`;
       }
 
-      // Format Mood
-      const lastMood = moodHistory.find(m => m.date === todayString) || moodHistory[0];
+      // Format Mood — only show if from today or yesterday
+      const todayMood = moodHistory.find(m => m.date === todayString);
+      const yesterdayMood = moodHistory.find(m => m.date === yesterdayString);
+      const lastMood = todayMood || yesterdayMood;
       if (lastMood) {
         newData.mood = `Feeling ${lastMood.mood}`;
       }

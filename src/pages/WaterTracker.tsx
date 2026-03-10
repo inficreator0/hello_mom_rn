@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, Switch } from "react-native";
 import { Droplets, Plus, History, Trash2, Info } from "lucide-react-native";
 import { PageContainer } from "../components/common/PageContainer";
@@ -10,7 +10,7 @@ import { notificationsAPI } from "../lib/api/notifications";
 import { NotificationSettings } from "../types";
 import { useToast } from "../context/ToastContext";
 import { toLocalTime, formatLocalTime } from "../lib/utils/dateUtils";
-import Animated, { FadeInDown } from "react-native-reanimated";
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 
 const DAILY_GOAL_ML = 3000;
 const QUICK_ADDS = [250, 500, 750];
@@ -66,6 +66,20 @@ export const WaterTracker = () => {
     }, [todayLogs]);
 
     const progress = Math.min(todayIntake / DAILY_GOAL_ML, 1);
+
+    const animatedProgress = useSharedValue(0);
+
+    useEffect(() => {
+        animatedProgress.value = withSpring(progress, {
+            damping: 15,
+            stiffness: 80,
+            mass: 0.8,
+        });
+    }, [progress]);
+
+    const waterLevelStyle = useAnimatedStyle(() => ({
+        height: `${animatedProgress.value * 100}%`,
+    }));
 
     const handleAddWater = async (amount: number) => {
         try {
@@ -130,7 +144,7 @@ export const WaterTracker = () => {
                 <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.progressContainer}>
 
                     <View style={styles.glassContainer}>
-                        <View style={[styles.waterLevel, { height: `${progress * 100}%` }]} />
+                        <Animated.View style={[styles.waterLevel, waterLevelStyle]} />
                         <View style={styles.glassContent}>
                             <Droplets size={48} color={progress > 0.4 ? "#fff" : "#3b82f6"} />
                             <Text style={[styles.progressValue, { color: progress > 0.6 ? "#fff" : "#1e293b" }]}>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Home, Activity, FileText, Stethoscope, Users, Settings, HelpCircle, LogOut, Lightbulb } from 'lucide-react-native';
+import { Home, Activity, FileText, Stethoscope, Users, Settings, HelpCircle, LogOut, Lightbulb, Download } from 'lucide-react-native';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { DefaultTheme, NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
 import { ActivityIndicator, View, Text } from 'react-native';
@@ -42,6 +42,8 @@ import { ResetPassword } from './pages/ResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import { HelpSupport } from './pages/HelpSupport';
 import { FeatureRequest } from './pages/FeatureRequest';
+import { AppUpdates } from './pages/AppUpdates';
+import { UpdateBottomSheet } from './components/UpdateBottomSheet';
 import pkg from '../package.json';
 
 
@@ -91,6 +93,11 @@ const CustomDrawerContent = (props: any) => {
         label="Feature Request"
         icon={({ color, size }: { color: string; size: number }) => <Lightbulb color={color} size={size} />}
         onPress={() => navigation.navigate('FeatureRequest')}
+      />
+      <DrawerItem
+        label="App Updates"
+        icon={({ color, size }: { color: string; size: number }) => <Download color={color} size={size} />}
+        onPress={() => navigation.navigate('AppUpdates')}
       />
 
       <View style={{ flex: 1 }} />
@@ -245,6 +252,7 @@ const Navigation = () => {
               <Stack.Screen name="WeightTracker" component={WeightTracker} />
               <Stack.Screen name="HelpSupport" component={HelpSupport} />
               <Stack.Screen name="FeatureRequest" component={FeatureRequest} />
+              <Stack.Screen name="AppUpdates" component={AppUpdates} />
               <Stack.Screen name="ComingSoon" component={ComingSoon} />
               <Stack.Screen name="Onboarding" component={Onboarding} />
               <Stack.Screen name="VerifyEmail" component={VerifyEmail} />
@@ -252,6 +260,7 @@ const Navigation = () => {
           )}
         </Stack.Navigator>
       </NavigationContainer>
+      <UpdateBottomSheet />
     </NavigationIndependentTree>
   );
 };
