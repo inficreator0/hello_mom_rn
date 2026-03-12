@@ -152,7 +152,7 @@ const Login = () => {
                 <>
                   <View style={styles.inputGroup}>
                     <Input
-                      placeholder="Username *"
+                      placeholder={mode === "login" ? "Username or Email" : "Username *"}
                       autoCapitalize="none"
                       value={username}
                       onChangeText={setUsername}
