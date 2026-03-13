@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, StyleSheet, Linking } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../context/AuthContext";
 import { usePreferences } from "../context/PreferencesContext";
@@ -7,8 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../co
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { AnimatedHeart } from "../components/ui/AnimatedHeart";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { PageContainer } from "../components/common/PageContainer";
+import { CheckSquare, Square } from "lucide-react-native";
 
 const Login = () => {
   const [mode, setModeState] = useState<"login" | "signup" | "forgot">("login");
@@ -21,6 +21,7 @@ const Login = () => {
   const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
   const { login, register, isAuthenticated, isLoading: authLoading, isOnboarded, isCheckingOnboarding } = useAuth();
   const navigation = useNavigation<any>();
   const { onboardingCompleted } = usePreferences();
@@ -49,6 +50,11 @@ const Login = () => {
       } else if (mode === "signup") {
         if (!username.trim() || !email.trim() || !password.trim() || !firstName.trim() || !lastName.trim()) {
           setError("Please fill in all fields.");
+          setIsLoading(false);
+          return;
+        }
+        if (!privacyAccepted) {
+          setError("You must accept the Privacy Policy to sign up.");
           setIsLoading(false);
           return;
         }
@@ -181,6 +187,31 @@ const Login = () => {
                 </>
               )}
 
+              {mode === "signup" && (
+                <View style={styles.privacyContainer}>
+                  <Pressable
+                    style={styles.checkboxContainer}
+                    onPress={() => setPrivacyAccepted(!privacyAccepted)}
+                    disabled={isLoading}
+                  >
+                    {privacyAccepted ? (
+                      <CheckSquare size={20} color="#ec4899" />
+                    ) : (
+                      <Square size={20} color="#94a3b8" />
+                    )}
+                  </Pressable>
+                  <Text style={styles.privacyText}>
+                    I accept the{' '}
+                    <Text
+                      style={styles.privacyLink}
+                      onPress={() => Linking.openURL('https://sites.google.com/view/nova-app-privacy-policy')}
+                    >
+                      Privacy Policy
+                    </Text>
+                  </Text>
+                </View>
+              )}
+
               {error ? (
                 <View style={styles.errorContainer}>
                   <Text style={styles.errorText}>{error}</Text>
@@ -222,6 +253,12 @@ const Login = () => {
                     : "Already have an account? Sign in"}
                 </Text>
               </Pressable>
+
+              {mode === "signup" && (
+                <Text style={styles.signupDisclaimerText}>
+                  This app is not a medical device and does not diagnose, treat, cure, or prevent any medical condition. Consult a healthcare professional for medical advice, diagnosis, or treatment.
+                </Text>
+              )}
             </CardContent>
           </Card>
         </ScrollView>
@@ -264,7 +301,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 107, 107, 0.1)', // primary/10
     padding: 20,
     borderRadius: 9999,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   cardTitle: {
     fontSize: 24,
@@ -286,6 +323,23 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 12,
+    color: '#ec4899',
+    fontWeight: '500',
+  },
+  privacyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkboxContainer: {
+    marginRight: 8,
+    padding: 2,
+  },
+  privacyText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#475569',
+  },
+  privacyLink: {
     color: '#ec4899',
     fontWeight: '500',
   },
@@ -323,6 +377,13 @@ const styles = StyleSheet.create({
     color: '#ec4899', // primary
     textAlign: 'center',
     fontWeight: '500',
+  },
+  signupDisclaimerText: {
+    fontSize: 12,
+    color: '#64748b', // slate-500
+    textAlign: 'center',
+    marginTop: 0,
+    lineHeight: 18,
   },
 });
 

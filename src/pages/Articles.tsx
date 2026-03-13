@@ -103,7 +103,8 @@ export const Articles = () => {
     setCursor(null);
     setPage(0);
     fetchArticles(selectedCategory, debouncedSearchQuery, false);
-  }, [selectedCategory, debouncedSearchQuery, fetchArticles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, debouncedSearchQuery]);
 
   const handleLoadMore = () => {
     if (!isLoading && !isLoadingMore && hasMore) {
@@ -178,28 +179,30 @@ export const Articles = () => {
           />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory === cat;
-            return (
-              <Pressable
-                key={cat}
-                onPress={() => setSelectedCategory(cat)}
-                style={[
-                  styles.categoryChip,
-                  isSelected ? styles.categoryChipSelected : styles.categoryChipUnselected
-                ]}
-              >
-                <Text style={[
-                  styles.categoryText,
-                  isSelected ? styles.categoryTextSelected : styles.categoryTextUnselected
-                ]}>
-                  {cat}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        {!searchQuery && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+            {CATEGORIES.map((cat) => {
+              const isSelected = selectedCategory === cat;
+              return (
+                <Pressable
+                  key={cat}
+                  onPress={() => setSelectedCategory(cat)}
+                  style={[
+                    styles.categoryChip,
+                    isSelected ? styles.categoryChipSelected : styles.categoryChipUnselected
+                  ]}
+                >
+                  <Text style={[
+                    styles.categoryText,
+                    isSelected ? styles.categoryTextSelected : styles.categoryTextUnselected
+                  ]}>
+                    {cat}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
 
       {isLoading && articles.length === 0 ? (

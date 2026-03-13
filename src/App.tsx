@@ -8,6 +8,9 @@ import { ActivityIndicator, View, Text } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Linking from 'expo-linking';
+import * as SplashScreen from 'expo-splash-screen';
+
+SplashScreen.preventAutoHideAsync().catch(() => { });
 
 import Community from './components/Community';
 import { Trackers } from './pages/Trackers';
@@ -43,6 +46,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import { HelpSupport } from './pages/HelpSupport';
 import { FeatureRequest } from './pages/FeatureRequest';
 import { AppUpdates } from './pages/AppUpdates';
+import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { UpdateBottomSheet } from './components/UpdateBottomSheet';
 import pkg from '../package.json';
 
@@ -201,18 +205,14 @@ const MainTabs = () => {
 const Navigation = () => {
   const { isAuthenticated, isLoading, isOnboarded, isCheckingOnboarding } = useAuth();
 
-  if (isLoading) {
-    return null; // Or a splash screen
-  }
+  React.useEffect(() => {
+    if (!isLoading && !isCheckingOnboarding) {
+      SplashScreen.hideAsync().catch(() => { });
+    }
+  }, [isLoading, isCheckingOnboarding]);
 
-  // Show loader while checking onboarding status
-  if (isCheckingOnboarding) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
-        <ActivityIndicator color="#ec4899" size="large" />
-        <Text style={{ marginTop: 16, color: '#64748b' }}>Checking your profile...</Text>
-      </View>
-    );
+  if (isLoading || isCheckingOnboarding) {
+    return null;
   }
 
   return (
@@ -253,6 +253,7 @@ const Navigation = () => {
               <Stack.Screen name="HelpSupport" component={HelpSupport} />
               <Stack.Screen name="FeatureRequest" component={FeatureRequest} />
               <Stack.Screen name="AppUpdates" component={AppUpdates} />
+              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicy} />
               <Stack.Screen name="ComingSoon" component={ComingSoon} />
               <Stack.Screen name="Onboarding" component={Onboarding} />
               <Stack.Screen name="VerifyEmail" component={VerifyEmail} />

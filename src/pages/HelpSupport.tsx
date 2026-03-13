@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Linking } from 'react-na
 import { ScreenHeader } from '../components/common/ScreenHeader';
 import { PageContainer } from '../components/common/PageContainer';
 import { Mail, MessageCircle, FileText, ChevronRight, HelpCircle } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
 
 const FAQ_ITEMS = [
     {
@@ -24,6 +25,8 @@ const FAQ_ITEMS = [
 ];
 
 export const HelpSupport = () => {
+    const navigation = useNavigation<any>();
+
     const handleContactSupport = () => {
         Linking.openURL('mailto:offclockengineers@gmail.com');
     };
@@ -79,7 +82,7 @@ export const HelpSupport = () => {
 
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Legal</Text>
-                    <Pressable style={styles.contactCard}>
+                    <Pressable style={styles.contactCard} onPress={() => navigation.navigate('PrivacyPolicy')}>
                         <View style={[styles.contactIcon, { backgroundColor: '#f8fafc' }]}>
                             <FileText size={24} color="#64748b" />
                         </View>
@@ -89,7 +92,7 @@ export const HelpSupport = () => {
                         <ChevronRight size={20} color="#94a3b8" />
                     </Pressable>
 
-                    <Pressable style={styles.contactCard}>
+                    {/* <Pressable style={styles.contactCard}>
                         <View style={[styles.contactIcon, { backgroundColor: '#f8fafc' }]}>
                             <FileText size={24} color="#64748b" />
                         </View>
@@ -97,7 +100,7 @@ export const HelpSupport = () => {
                             <Text style={styles.contactTitle}>Terms of Service</Text>
                         </View>
                         <ChevronRight size={20} color="#94a3b8" />
-                    </Pressable>
+                    </Pressable> */}
                 </View>
 
                 <View style={{ height: 40 }} />
