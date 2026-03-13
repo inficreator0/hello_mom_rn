@@ -44,7 +44,7 @@
       ]
     },
     "web": {
-      "favicon": "./public/favicon.ico"
+      "favicon": "./public/favicon.png"
     },
     "extra": {
       "eas": {
